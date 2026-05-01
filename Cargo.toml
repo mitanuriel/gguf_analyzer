@@ -3,6 +3,8 @@ name = "gguf_analyzer"
 version = "0.1.0"
 edition = "2024"
 description = "A CLI tool to explore and edit the metadata of GGUF model files"
+repository = "https://github.com/mitanuriel/gguf_analyzer"
+license = "MIT"
 
 [[bin]]
 name = "gguf-analyzer"
@@ -42,3 +44,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 # ANSI colour output
 colored = "2"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

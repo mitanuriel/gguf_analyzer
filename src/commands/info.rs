@@ -1,7 +1,6 @@
 //! `info` subcommand — print a high-level summary of a GGUF file.
 
 use anyhow::Context as _;
-use colored::Colorize as _;
 use tracing::instrument;
 
 use crate::{
@@ -9,7 +8,11 @@ use crate::{
     display::{format_bytes, term_width},
     gguf::ParsedGguf,
 };
-use tabled::{builder::Builder, settings::Style, Table};
+use tabled::{
+    builder::Builder,
+    settings::{object::{Columns, Rows}, Color, Modify, Style},
+    Table,
+};
 
 /// Run the `info` subcommand.
 #[instrument(skip_all, fields(file = %args.file.display()))]
@@ -25,10 +28,7 @@ pub fn run(args: &InfoArgs) -> anyhow::Result<()> {
 
 fn info_table(gguf: &ParsedGguf, _width: usize) -> Table {
     let mut builder = Builder::new();
-    builder.push_record([
-        "Field".bold().cyan().to_string(),
-        "Value".bold().cyan().to_string(),
-    ]);
+    builder.push_record(["Field", "Value"]);
     let rows: &[(&str, String)] = &[
         ("File",               gguf.path.display().to_string()),
         ("File size",          format_bytes(gguf.file_size)),
@@ -39,10 +39,13 @@ fn info_table(gguf: &ParsedGguf, _width: usize) -> Table {
         ("Tensor data offset", format!("{:#010x}  ({})", gguf.tensor_data_offset, format_bytes(gguf.tensor_data_offset))),
     ];
     for (field, value) in rows {
-        builder.push_record([field.bold().white().to_string(), value.clone()]);
+        builder.push_record([*field, value.as_str()]);
     }
     let mut table = builder.build();
     table.with(Style::rounded());
+    table.with(Modify::new(Rows::first()).with(Color::BOLD | Color::FG_CYAN));
+    table.with(Modify::new(Columns::new(..1)).with(Color::BOLD | Color::FG_WHITE));
+    table.with(Modify::new(Rows::first()).with(Color::BOLD | Color::FG_CYAN));
     table
 }
 
