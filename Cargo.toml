@@ -1,0 +1,37 @@
+[package]
+name = "gguf_analyzer"
+version = "0.1.0"
+edition = "2024"
+description = "A CLI tool to explore and edit the metadata of GGUF model files"
+
+[[bin]]
+name = "gguf-analyzer"
+path = "src/main.rs"
+
+[dependencies]
+# GGUF reading / writing
+gguf-rs-lib = { version = "0.2", features = ["mmap"] }
+
+# CLI argument parsing
+clap = { version = "4", features = ["derive", "env"] }
+clap_complete = "4"
+
+# Error handling
+anyhow = "1"
+thiserror = "2"
+
+# Serialisation
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Memory-mapped I/O
+memmap2 = "0.9"
+
+# Pretty table output
+tabled = "0.17"
+
+# Terminal width detection
+terminal_size = "0.4"
+
+# Glob pattern matching for --filter
+glob = "0.3"

@@ -1,0 +1,22 @@
+# Rust build artefacts
+/target/
+**/*.rs.bk
+
+# Cargo lock (intentionally tracked for binary crates)
+# Cargo.lock
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Test fixtures – large model files should not be committed
+*.gguf
+
+# Generated shell completions (regenerate with: gguf-analyzer completions <shell>)
+completions/
+
+# Environment files
+.env
