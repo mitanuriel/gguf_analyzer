@@ -97,9 +97,11 @@ pub struct SetArgs {
     pub file: PathBuf,
 
     /// Metadata key to set (e.g. `general.name`).
+    #[arg(long)]
     pub key: String,
 
     /// New value (parsed according to --type).
+    #[arg(long)]
     pub value: String,
 
     /// Value type to use when serialising the new value.
@@ -127,6 +129,7 @@ pub struct RemoveArgs {
     pub file: PathBuf,
 
     /// Metadata key to remove.
+    #[arg(long)]
     pub key: String,
 
     /// Destination path for the new GGUF file.
