@@ -167,6 +167,7 @@ checksum = "f33860905c993762dfe4b3fdc17a2ae488bb2966422b543b33cf97cb06d5e15a"
 dependencies = [
  "hashbrown",
  "libm",
+ "memmap2",
  "serde",
  "thiserror 1.0.69",
 ]

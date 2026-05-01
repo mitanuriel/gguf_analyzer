@@ -1,32 +1,33 @@
 //! GGUF file access layer.
 //!
-//! [`ParsedGguf`] opens a GGUF file using **memory-mapping** (via
-//! [`memmap2`] + `gguf-rs-lib`'s `MmapGGUFFile`) so that only the header
-//! region is paged in by the OS – the gigabyte-sized tensor blob is never
-//! copied into the process heap.
+//! [`ParsedGguf`] opens a GGUF file using a **memory map** (via [`memmap2`])
+//! so that the gigabyte-sized tensor data section is never copied into the
+//! process heap.
 //!
-//! For *write* operations (`set`, `remove`) the module provides
+//! For *write* operations (`set`, `remove`) this module provides
 //! [`write_modified_gguf`], which:
 //!
 //! 1. Re-serialises the new header + modified metadata.
-//! 2. Calculates the GGUF-spec alignment padding between the header and the
-//!    first tensor (`general.alignment`, defaulting to 32 bytes).
-//! 3. Streams the unchanged tensor data from the mmap'd source into the new
-//!    file.
+//! 2. Inserts GGUF-spec alignment padding between the header and the first
+//!    tensor (`general.alignment`, defaulting to 32 bytes).
+//! 3. Streams the unchanged tensor data from the source file into the new file.
 
 use std::{
     fs,
-    io::{self, BufWriter, Write},
+    io::{self, BufWriter, Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
 };
 
 use anyhow::Context as _;
+use memmap2::Mmap;
+
 use gguf_rs_lib::{
-    format::metadata::Metadata,
-    mmap::MmapGGUFFile,
+    format::{
+        header::{GGUFHeader, TensorInfo as HeaderTensorInfo},
+        metadata::Metadata,
+    },
     reader::file_reader::GGUFFileReader,
     tensor::info::TensorInfo,
-    GGUFError,
 };
 
 use crate::error::AppError;
@@ -58,8 +59,9 @@ pub struct ParsedGguf {
     pub alignment: u64,
     /// Total file size in bytes.
     pub file_size: u64,
-    /// The live memory map (keeps the pages alive).
-    _mmap: MmapGGUFFile,
+    /// Live memory map — keeps the mapping alive and available for tensor-data
+    /// streaming in write operations.
+    pub mmap: Mmap,
 }
 
 // ── Constructor ───────────────────────────────────────────────────────────────
@@ -75,28 +77,31 @@ impl ParsedGguf {
 
         let file_size = fs::metadata(&path)
             .map_err(|e| AppError::io(&path, e))
-            .with_context(|| format!("stat('{}')", path.display()))?
+            .with_context(|| format!("stat '{}'", path.display()))?
             .len();
 
-        // Memory-map the file
-        let mmap = MmapGGUFFile::mmap(&path)
-            .map_err(|e| AppError::gguf_lib(&path, e))
-            .with_context(|| format!("mmap('{}')", path.display()))?;
+        // Open the file once for memory-mapping, once for the parser.
+        let raw = fs::File::open(&path)
+            .map_err(|e| AppError::io(&path, e))
+            .with_context(|| format!("open '{}' for mmap", path.display()))?;
 
-        // Open through a reader to parse header + metadata + tensor infos.
-        // `open_gguf_file` uses std::fs::File internally; the mmap above is
-        // separate and only used to keep the mapping alive for write paths.
+        // SAFETY: we never mutate the mapping and the file descriptor stays
+        // open (via `raw`) until `mmap` is dropped with `ParsedGguf`.
+        let mmap = unsafe { Mmap::map(&raw) }
+            .map_err(|e| AppError::io(&path, e))
+            .with_context(|| format!("mmap '{}'", path.display()))?;
+
+        // Memory-map the file
         let file = fs::File::open(&path)
             .map_err(|e| AppError::io(&path, e))
-            .with_context(|| format!("open('{}')", path.display()))?;
+            .with_context(|| format!("open '{}'", path.display()))?;
 
         let reader = GGUFFileReader::new(io::BufReader::new(file))
             .map_err(|e| AppError::gguf_lib(&path, e))
-            .with_context(|| format!("parse header of '{}'", path.display()))?;
+            .with_context(|| format!("parse '{}'", path.display()))?;
 
-        let header = reader.header();
-        let version = header.version;
-        let tensor_count = header.tensor_count;
+        let version = reader.header().version;
+        let tensor_count = reader.header().tensor_count;
         let tensor_data_offset = reader.tensor_data_offset();
 
         let metadata = reader.metadata().clone();
@@ -116,7 +121,7 @@ impl ParsedGguf {
             tensor_data_offset,
             alignment,
             file_size,
-            _mmap: mmap,
+            mmap,
         })
     }
 }
@@ -172,8 +177,6 @@ pub fn write_modified_gguf(
     alignment: u64,
     dest: &Path,
 ) -> anyhow::Result<()> {
-    use gguf_rs_lib::format::header::GGUFHeader;
-
     // ── 1. Build new header ────────────────────────────────────────────────
     let new_header = GGUFHeader::new(tensor_infos.len() as u64, metadata.len() as u64);
 
@@ -191,12 +194,11 @@ pub fn write_modified_gguf(
 
     // Serialise each tensor info
     for ti in tensor_infos {
-        // gguf-rs-lib exposes write_to on TensorInfo via its own trait
-        use gguf_rs_lib::format::header::TensorInfo as HeaderTensorInfo;
         let hti = HeaderTensorInfo {
             name: ti.name.clone(),
+            n_dimensions: ti.shape.ndim() as u32,
             dimensions: ti.shape.dims().to_vec(),
-            tensor_type: ti.tensor_type,
+            tensor_type: ti.tensor_type as u32,
             offset: ti.data_offset,
         };
         hti.write_to(&mut header_buf)
@@ -214,7 +216,6 @@ pub fn write_modified_gguf(
         .map_err(|e| AppError::io(src_path, e))
         .context("open source for tensor copy")?;
 
-    use std::io::{Read, Seek, SeekFrom};
     src_file
         .seek(SeekFrom::Start(src_tensor_offset))
         .map_err(|e| AppError::io(src_path, e))
