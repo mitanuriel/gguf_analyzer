@@ -3,11 +3,11 @@
 use std::{
     fs,
     io::{self, Write},
-    path::Path,
 };
 
 use anyhow::Context as _;
 use serde_json::{json, Map, Value as JsonValue};
+use tracing::{debug, instrument};
 
 use crate::{
     cli::{ExportArgs, ExportFormat},
@@ -17,6 +17,7 @@ use crate::{
 };
 
 /// Run the `export` subcommand.
+#[instrument(skip_all, fields(file = %args.file.display(), format = ?args.format))]
 pub fn run(args: &ExportArgs) -> anyhow::Result<()> {
     let gguf = ParsedGguf::open(&args.file)
         .with_context(|| format!("failed to open '{}'", args.file.display()))?;
@@ -24,6 +25,7 @@ pub fn run(args: &ExportArgs) -> anyhow::Result<()> {
     // Sort entries by key for deterministic output.
     let mut entries: Vec<_> = gguf.metadata.iter().collect();
     entries.sort_by_key(|(k, _)| k.as_str());
+    debug!(entries = entries.len(), "exporting metadata");
 
     let output = match args.format {
         ExportFormat::Json     => export_json(&entries, args.array_limit)?,

@@ -20,6 +20,7 @@ use std::{
 
 use anyhow::Context as _;
 use memmap2::Mmap;
+use tracing::{debug, info, instrument};
 
 use gguf_rs_lib::{
     format::{
@@ -72,6 +73,7 @@ impl ParsedGguf {
     /// # Errors
     /// Returns [`AppError::Io`] if the file cannot be opened, or
     /// [`AppError::GgufLib`] / [`AppError::GgufParse`] if it is corrupt.
+    #[instrument(skip_all, fields(path = %path.as_ref().display()))]
     pub fn open(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let path = path.as_ref().to_path_buf();
 
@@ -111,6 +113,16 @@ impl ParsedGguf {
         let alignment = metadata
             .get_u64("general.alignment")
             .unwrap_or(DEFAULT_ALIGNMENT);
+
+        info!(
+            version,
+            tensor_count,
+            metadata_entries = metadata.len(),
+            alignment,
+            tensor_data_offset,
+            file_size,
+            "parsed GGUF file"
+        );
 
         Ok(Self {
             path,
@@ -169,6 +181,7 @@ pub fn align_offset(offset: u64, alignment: u64) -> u64 {
 /// * `tensor_infos`      – tensor info entries (unchanged from source).
 /// * `alignment`         – byte alignment for the tensor data section.
 /// * `dest`              – destination path to write to.
+#[instrument(skip(metadata, tensor_infos), fields(dest = %dest.display()))]
 pub fn write_modified_gguf(
     src_path: &Path,
     src_tensor_offset: u64,
@@ -210,6 +223,7 @@ pub fn write_modified_gguf(
     let header_end = header_buf.len() as u64;
     let aligned_end = align_offset(header_end, alignment);
     let padding_bytes = (aligned_end - header_end) as usize;
+    debug!(header_end, aligned_end, padding_bytes, "alignment calculated");
 
     // ── 4. Open source for tensor streaming ───────────────────────────────
     let mut src_file = fs::File::open(src_path)
@@ -261,6 +275,7 @@ pub fn write_modified_gguf(
         .map_err(|e| AppError::io(dest, e))
         .context("flush output")?;
 
+    info!("write complete");
     Ok(())
 }
 

@@ -9,6 +9,11 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 /// All errors that can be produced by `gguf-analyzer`.
+///
+/// Some variants (`GgufParse`, `TypeParse`, `UnknownExportFormat`) are defined
+/// for completeness and future use; they may not be constructed by the current
+/// code paths.
+#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum AppError {
     // ── I/O ──────────────────────────────────────────────────────────────────

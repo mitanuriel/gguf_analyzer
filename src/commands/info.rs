@@ -1,7 +1,8 @@
 //! `info` subcommand — print a high-level summary of a GGUF file.
 
 use anyhow::Context as _;
-use std::path::Path;
+use colored::Colorize as _;
+use tracing::instrument;
 
 use crate::{
     cli::InfoArgs,
@@ -11,6 +12,7 @@ use crate::{
 use tabled::{builder::Builder, settings::Style, Table};
 
 /// Run the `info` subcommand.
+#[instrument(skip_all, fields(file = %args.file.display()))]
 pub fn run(args: &InfoArgs) -> anyhow::Result<()> {
     let gguf = ParsedGguf::open(&args.file)
         .with_context(|| format!("failed to open '{}'", args.file.display()))?;
@@ -23,18 +25,22 @@ pub fn run(args: &InfoArgs) -> anyhow::Result<()> {
 
 fn info_table(gguf: &ParsedGguf, _width: usize) -> Table {
     let mut builder = Builder::new();
-    builder.push_record(["Field", "Value"]);
-    builder.push_record(["File", &gguf.path.display().to_string()]);
-    builder.push_record(["File size", &format_bytes(gguf.file_size)]);
-    builder.push_record(["GGUF version", &gguf.version.to_string()]);
-    builder.push_record(["Tensor count", &gguf.tensor_count.to_string()]);
-    builder.push_record(["Metadata entries", &gguf.metadata.len().to_string()]);
-    builder.push_record(["Alignment", &format!("{} bytes", gguf.alignment)]);
     builder.push_record([
-        "Tensor data offset",
-        &format!("{:#010x}  ({})", gguf.tensor_data_offset, format_bytes(gguf.tensor_data_offset)),
+        "Field".bold().cyan().to_string(),
+        "Value".bold().cyan().to_string(),
     ]);
-
+    let rows: &[(&str, String)] = &[
+        ("File",               gguf.path.display().to_string()),
+        ("File size",          format_bytes(gguf.file_size)),
+        ("GGUF version",       gguf.version.to_string()),
+        ("Tensor count",       gguf.tensor_count.to_string()),
+        ("Metadata entries",   gguf.metadata.len().to_string()),
+        ("Alignment",          format!("{} bytes", gguf.alignment)),
+        ("Tensor data offset", format!("{:#010x}  ({})", gguf.tensor_data_offset, format_bytes(gguf.tensor_data_offset))),
+    ];
+    for (field, value) in rows {
+        builder.push_record([field.bold().white().to_string(), value.clone()]);
+    }
     let mut table = builder.build();
     table.with(Style::rounded());
     table

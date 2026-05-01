@@ -3,13 +3,17 @@
 //! All table-building functions use [`tabled`] with [`terminal_size`] so output
 //! never overflows the current terminal width (falls back to 80 columns).
 
+use colored::Colorize as _;
 use gguf_rs_lib::{
     format::metadata::{MetadataArray, MetadataValue},
     tensor::info::TensorInfo,
 };
 use tabled::{
     builder::Builder,
-    settings::{Style, Width},
+    settings::{
+        object::Columns,
+        Modify, Style, Width,
+    },
     Table,
 };
 use terminal_size::{terminal_size, Width as TWidth};
@@ -129,9 +133,12 @@ pub fn format_shape(dims: &[u64]) -> String {
 /// The header row is `["Key", "Value"]`.
 pub fn kv_table(rows: &[(&str, &str)], width: usize) -> Table {
     let mut builder = Builder::new();
-    builder.push_record(["Key", "Value"]);
+    builder.push_record([
+        "Key".bold().cyan().to_string(),
+        "Value".bold().cyan().to_string(),
+    ]);
     for (k, v) in rows {
-        builder.push_record([*k, *v]);
+        builder.push_record([k.bold().white().to_string(), (*v).to_string()]);
     }
     let mut table = builder.build();
     table.with(Style::rounded());
@@ -140,15 +147,34 @@ pub fn kv_table(rows: &[(&str, &str)], width: usize) -> Table {
 }
 
 /// Build a three-column `["Key", "Type", "Value"]` table for metadata display.
+///
+/// Key and Type columns keep their natural widths; the Value column wraps to
+/// fill the remaining terminal width.
 pub fn meta_table(rows: &[(&str, &str, &str)], width: usize) -> Table {
     let mut builder = Builder::new();
-    builder.push_record(["Key", "Type", "Value"]);
+    builder.push_record([
+        "Key".bold().cyan().to_string(),
+        "Type".bold().cyan().to_string(),
+        "Value".bold().cyan().to_string(),
+    ]);
     for (k, t, v) in rows {
-        builder.push_record([*k, *t, *v]);
+        builder.push_record([
+            k.bold().white().to_string(),
+            t.dimmed().to_string(),
+            (*v).to_string(),
+        ]);
     }
     let mut table = builder.build();
     table.with(Style::rounded());
-    table.with(Width::wrap(width));
+    // Let the whole table use at most `width` chars, wrapping the Value column.
+    // Key (col 0) and Type (col 1) get a MinWidth so they are never squashed.
+    let key_w   = rows.iter().map(|(k,_,_)| k.len()).max().unwrap_or(3).max(3);
+    let type_w  = 8_usize; // longest type name is "string" (6) + borders
+    let borders = 4 * 3 + 2; // 4 col-borders × ~3 chars + outer
+    let value_w = width.saturating_sub(key_w + type_w + borders).max(20);
+    table.with(Modify::new(Columns::new(..1)).with(Width::increase(key_w)));
+    table.with(Modify::new(Columns::new(1..2)).with(Width::increase(type_w)));
+    table.with(Modify::new(Columns::new(2..)).with(Width::wrap(value_w)));
     table
 }
 
@@ -157,13 +183,25 @@ pub fn meta_table(rows: &[(&str, &str, &str)], width: usize) -> Table {
 /// Columns: `Name | Shape | Type | Offset | Size`.
 pub fn tensor_table(infos: &[TensorInfo], width: usize) -> Table {
     let mut builder = Builder::new();
-    builder.push_record(["Name", "Shape", "Type", "Offset", "Size"]);
+    builder.push_record([
+        "Name".bold().cyan().to_string(),
+        "Shape".bold().cyan().to_string(),
+        "Type".bold().cyan().to_string(),
+        "Offset".bold().cyan().to_string(),
+        "Size".bold().cyan().to_string(),
+    ]);
     for ti in infos {
         let shape = format_shape(ti.shape.dims());
         let type_name = ti.tensor_type.name().to_string();
         let offset = format!("{:#010x}", ti.data_offset);
         let size = format_bytes(ti.expected_data_size());
-        builder.push_record([ti.name.clone(), shape, type_name, offset, size]);
+        builder.push_record([
+            ti.name.bold().white().to_string(),
+            shape,
+            type_name.yellow().to_string(),
+            offset.dimmed().to_string(),
+            size.green().to_string(),
+        ]);
     }
     let mut table = builder.build();
     table.with(Style::rounded());

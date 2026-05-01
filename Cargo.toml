@@ -35,3 +35,10 @@ terminal_size = "0.4"
 
 # Glob pattern matching for --filter
 glob = "0.3"
+
+# Structured, levelled tracing / diagnostics
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# ANSI colour output
+colored = "2"

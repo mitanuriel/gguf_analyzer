@@ -5,6 +5,7 @@
 
 use anyhow::Context as _;
 use glob::Pattern;
+use tracing::{debug, instrument};
 
 use crate::{
     cli::MetaArgs,
@@ -13,6 +14,7 @@ use crate::{
 };
 
 /// Run the `meta` subcommand.
+#[instrument(skip_all, fields(file = %args.file.display(), filter = ?args.filter))]
 pub fn run(args: &MetaArgs) -> anyhow::Result<()> {
     let gguf = ParsedGguf::open(&args.file)
         .with_context(|| format!("failed to open '{}'", args.file.display()))?;
@@ -69,6 +71,7 @@ pub fn run(args: &MetaArgs) -> anyhow::Result<()> {
 
     let width = term_width();
     let table = meta_table(&row_refs, width);
+    debug!(rows = row_refs.len(), "rendering meta table");
     println!("{}", table);
     Ok(())
 }

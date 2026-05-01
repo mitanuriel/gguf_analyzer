@@ -4,7 +4,9 @@
 //! Tensor data is streamed byte-for-byte from the source.
 
 use anyhow::Context as _;
+use colored::Colorize as _;
 use std::fs;
+use tracing::{info, instrument};
 
 use crate::{
     cli::RemoveArgs,
@@ -14,6 +16,7 @@ use crate::{
 };
 
 /// Run the `remove` subcommand.
+#[instrument(skip_all, fields(file = %args.file.display(), key = %args.key))]
 pub fn run(args: &RemoveArgs) -> anyhow::Result<()> {
     let mut gguf = ParsedGguf::open(&args.file)
         .with_context(|| format!("failed to open '{}'", args.file.display()))?;
@@ -30,10 +33,10 @@ pub fn run(args: &RemoveArgs) -> anyhow::Result<()> {
     // ── Dry-run output ───────────────────────────────────────────────────────
     if args.dry_run {
         let old = gguf.metadata.get(&args.key).unwrap();
-        println!("Would remove  : {}", args.key);
-        println!("  Value       : {}", format_value(old, 8));
+        println!("{} {}", "Would remove  :".yellow().bold(), args.key.bold());
+        println!("  Value       : {}", format_value(old, 8).dimmed());
         println!("  Output file : {}", args.output.display());
-        println!("(dry-run — no files written)");
+        println!("{}", "(dry-run — no files written)".dimmed());
         return Ok(());
     }
 
@@ -57,12 +60,14 @@ pub fn run(args: &RemoveArgs) -> anyhow::Result<()> {
     .with_context(|| format!("write output '{}'", args.output.display()))?;
 
     eprintln!(
-        "Written: '{}' ({} bytes)",
+        "{} '{}' ({} bytes)",
+        "Written:".green().bold(),
         args.output.display(),
         fs::metadata(&args.output)
             .map(|m| m.len().to_string())
             .unwrap_or_else(|_| "?".to_string())
     );
+    info!(key = %args.key, output = %args.output.display(), "remove complete");
     Ok(())
 }
 

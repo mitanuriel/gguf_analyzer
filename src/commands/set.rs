@@ -5,7 +5,9 @@
 //! Tensor data is streamed byte-for-byte from the source.
 
 use anyhow::Context as _;
+use colored::Colorize as _;
 use std::fs;
+use tracing::{info, instrument};
 
 use gguf_rs_lib::format::metadata::MetadataValue;
 
@@ -17,6 +19,7 @@ use crate::{
 };
 
 /// Run the `set` subcommand.
+#[instrument(skip_all, fields(file = %args.file.display(), key = %args.key))]
 pub fn run(args: &SetArgs) -> anyhow::Result<()> {
     let mut gguf = ParsedGguf::open(&args.file)
         .with_context(|| format!("failed to open '{}'", args.file.display()))?;
@@ -45,14 +48,14 @@ pub fn run(args: &SetArgs) -> anyhow::Result<()> {
     if args.dry_run {
         if key_exists {
             let old = gguf.metadata.get(&args.key).unwrap();
-            println!("Would change  : {}", args.key);
-            println!("  Old value   : {}", format_value(old, 8));
+            println!("{} {}", "Would change  :".yellow().bold(), args.key.bold());
+            println!("  Old value   : {}", format_value(old, 8).dimmed());
         } else {
-            println!("Would create  : {}", args.key);
+            println!("{} {}", "Would create  :".green().bold(), args.key.bold());
         }
-        println!("  New value   : {}", format_value(&new_value, 8));
+        println!("  New value   : {}", format_value(&new_value, 8).cyan());
         println!("  Output file : {}", args.output.display());
-        println!("(dry-run — no files written)");
+        println!("{}", "(dry-run — no files written)".dimmed());
         return Ok(());
     }
 
@@ -76,12 +79,14 @@ pub fn run(args: &SetArgs) -> anyhow::Result<()> {
     .with_context(|| format!("write output '{}'", args.output.display()))?;
 
     eprintln!(
-        "Written: '{}' ({} bytes)",
+        "{} '{}' ({} bytes)",
+        "Written:".green().bold(),
         args.output.display(),
         fs::metadata(&args.output)
             .map(|m| m.len().to_string())
             .unwrap_or_else(|_| "?".to_string())
     );
+    info!(key = %args.key, output = %args.output.display(), "set complete");
     Ok(())
 }
 

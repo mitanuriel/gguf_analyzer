@@ -4,16 +4,27 @@ pub mod display;
 mod error;
 pub mod gguf;
 
-use anyhow::Context as _;
 use clap::CommandFactory;
 use clap_complete::generate;
+use colored::Colorize as _;
 use std::io;
+use tracing_subscriber::{fmt, EnvFilter};
 
 use cli::{Cli, Command};
 
 fn main() {
+    // Initialise tracing.  Set RUST_LOG=debug (or trace/info/warn) to see spans.
+    fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn")),
+        )
+        .with_writer(std::io::stderr)
+        .with_target(false)
+        .compact()
+        .init();
+
     if let Err(e) = run() {
-        eprintln!("Error: {:#}", e);
+        eprintln!("{} {:#}", "error:".red().bold(), e);
         std::process::exit(1);
     }
 }
