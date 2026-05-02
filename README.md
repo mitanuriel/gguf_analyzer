@@ -1,3 +1,4 @@
+
 # gguf-analyzer
 
 [![CI](https://github.com/mitanuriel/gguf_analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/mitanuriel/gguf_analyzer/actions/workflows/ci.yml)
@@ -19,11 +20,12 @@ Writes are always to a **new output file** — the source is never touched.
 
 ### `info` — file overview
 
-![info command output showing file size, GGUF version, tensor count and metadata count](docs/screenshots/info.png)
+<img width="647" height="151" alt="Screenshot 2026-05-02 at 06 30 51" src="https://github.com/user-attachments/assets/3f36f45e-6863-43b0-a44f-2cfaceffbe43" />
 
 ### `meta` — metadata table
 
-![meta command showing key, type, and value columns with colour-coded rows](docs/screenshots/meta.png)
+<img width="659" height="422" alt="Screenshot 2026-05-02 at 06 31 45" src="https://github.com/user-attachments/assets/7abcfb06-4263-472c-927b-51c17264d436" />
+
 
 ### `tensors` — tensor inventory
 
