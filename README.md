@@ -30,6 +30,18 @@ Writes are always to a **new output file** — the source is never touched.
 
 <img width="580" height="282" alt="Screenshot 2026-05-02 at 06 28 46" src="https://github.com/user-attachments/assets/d8f695ff-941f-4cac-9935-a636099a905d" />
 
+### `fetch from HuggingFace` — downloading from Hugging Face repo
+<img width="255" height="86" alt="Screenshot 2026-05-02 at 07 25 16" src="https://github.com/user-attachments/assets/238dc9ee-61bf-4422-9714-bcd30724b6ae" />
+
+### `model card from HuggingFace` — moel data and recommended sampling parameters
+<img width="403" height="273" alt="Screenshot 2026-05-02 at 07 24 33" src="https://github.com/user-attachments/assets/d393da92-4355-4847-b81b-dc52f99482b4" />
+
+<img width="642" height="655" alt="Screenshot 2026-05-02 at 07 26 33" src="https://github.com/user-attachments/assets/9607956b-b3cf-49e2-9961-eb09f92178af" />
+
+
+
+
+
 
 ---
 
