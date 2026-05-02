@@ -580,38 +580,38 @@ fn extract_gguf_sampling_params(gguf: &ParsedGguf) -> HashMap<&'static str, Meta
 
     // temperature (f32) — llama key takes priority over general key
     for src in &["llama.sampling.temperature", "general.sampling.temp"] {
-        if let Some(v) = gguf.metadata.get(*src) {
-            if let Some(f) = to_f32(v) {
-                map.insert(KEY_TEMPERATURE, MetadataValue::F32(f));
-                break;
-            }
+        if let Some(v) = gguf.metadata.get(src)
+            && let Some(f) = to_f32(v)
+        {
+            map.insert(KEY_TEMPERATURE, MetadataValue::F32(f));
+            break;
         }
     }
     // top_p (f32)
     for src in &["llama.sampling.top_p", "general.sampling.top_p"] {
-        if let Some(v) = gguf.metadata.get(*src) {
-            if let Some(f) = to_f32(v) {
-                map.insert(KEY_TOP_P, MetadataValue::F32(f));
-                break;
-            }
+        if let Some(v) = gguf.metadata.get(src)
+            && let Some(f) = to_f32(v)
+        {
+            map.insert(KEY_TOP_P, MetadataValue::F32(f));
+            break;
         }
     }
     // min_p (f32)
     for src in &["llama.sampling.min_p", "general.sampling.min_p"] {
-        if let Some(v) = gguf.metadata.get(*src) {
-            if let Some(f) = to_f32(v) {
-                map.insert(KEY_MIN_P, MetadataValue::F32(f));
-                break;
-            }
+        if let Some(v) = gguf.metadata.get(src)
+            && let Some(f) = to_f32(v)
+        {
+            map.insert(KEY_MIN_P, MetadataValue::F32(f));
+            break;
         }
     }
     // top_k (u32)
     for src in &["llama.sampling.top_k", "general.sampling.top_k"] {
-        if let Some(v) = gguf.metadata.get(*src) {
-            if let Some(n) = to_u32(v) {
-                map.insert(KEY_TOP_K, MetadataValue::U32(n));
-                break;
-            }
+        if let Some(v) = gguf.metadata.get(src)
+            && let Some(n) = to_u32(v)
+        {
+            map.insert(KEY_TOP_K, MetadataValue::U32(n));
+            break;
         }
     }
     // repetition penalty (f32)
@@ -620,11 +620,11 @@ fn extract_gguf_sampling_params(gguf: &ParsedGguf) -> HashMap<&'static str, Meta
         "general.sampling.penalty_repeat",
         "general.sampling.repeat_penalty",
     ] {
-        if let Some(v) = gguf.metadata.get(*src) {
-            if let Some(f) = to_f32(v) {
-                map.insert(KEY_REPETITION_PENALTY, MetadataValue::F32(f));
-                break;
-            }
+        if let Some(v) = gguf.metadata.get(src)
+            && let Some(f) = to_f32(v)
+        {
+            map.insert(KEY_REPETITION_PENALTY, MetadataValue::F32(f));
+            break;
         }
     }
 
