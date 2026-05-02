@@ -47,6 +47,15 @@ pub enum Command {
     /// Export metadata to a file (JSON / Markdown / CSV).
     Export(ExportArgs),
 
+    /// Fetch and download GGUF files from a HuggingFace repo or direct URL.
+    Fetch(FetchArgs),
+
+    /// Fetch and display the model card (README) of a HuggingFace repo.
+    ///
+    /// Parses model overview, architecture info, and recommended sampling
+    /// parameters from the repository README.
+    ModelCard(ModelCardArgs),
+
     /// Print shell completion script to stdout.
     Completions(CompletionsArgs),
 }
@@ -184,6 +193,53 @@ pub enum ExportFormat {
     Json,
     Markdown,
     Csv,
+}
+
+// ── fetch ─────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Parser)]
+pub struct FetchArgs {
+    /// HuggingFace repo (`owner/repo` or full URL) or a direct GGUF URL.
+    ///
+    /// Examples:
+    ///   `Qwen/Qwen3-0.6B-GGUF`
+    ///   `https://huggingface.co/Qwen/Qwen3-0.6B-GGUF`
+    ///   `https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf`
+    pub repo: String,
+
+    /// List available GGUF files without downloading.
+    #[arg(short, long)]
+    pub list: bool,
+
+    /// Quantisation or filename to download (glob pattern, e.g. `Q4_K_M` or `*Q8*`).
+    ///
+    /// If omitted and `--list` is not set, an interactive prompt is shown.
+    #[arg(short, long, value_name = "PATTERN")]
+    pub file: Option<String>,
+
+    /// Directory to save the downloaded file (default: current directory).
+    #[arg(short, long, value_name = "DIR")]
+    pub output_dir: Option<std::path::PathBuf>,
+
+    /// Overwrite the local file if it already exists.
+    #[arg(long)]
+    pub force: bool,
+}
+
+// ── model-card ────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Parser)]
+pub struct ModelCardArgs {
+    /// HuggingFace repo (`owner/repo` or full URL).
+    ///
+    /// Examples:
+    ///   `Qwen/Qwen3-0.6B-GGUF`
+    ///   `https://huggingface.co/Qwen/Qwen3-0.6B-GGUF`
+    pub repo: String,
+
+    /// Output the parsed model card as JSON instead of a human-readable table.
+    #[arg(long)]
+    pub json: bool,
 }
 
 // ── completions ───────────────────────────────────────────────────────────────
