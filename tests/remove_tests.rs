@@ -1,11 +1,7 @@
 //! Integration tests for the `remove` subcommand.
 
 mod common;
-use gguf_analyzer::{
-    cli::RemoveArgs,
-    commands::remove::run,
-    gguf::ParsedGguf,
-};
+use gguf_analyzer::{cli::RemoveArgs, commands::remove::run, gguf::ParsedGguf};
 use tempfile::NamedTempFile;
 
 fn output_tmp() -> NamedTempFile {
@@ -21,11 +17,11 @@ fn remove_key_disappears_from_output() {
     let out_path = out_tmp.path().to_path_buf();
 
     let args = RemoveArgs {
-        file:    src_path.clone(),
-        key:     "llm.context_length".to_string(),
-        output:  out_path.clone(),
-        force:   true,
-        backup:  false,
+        file: src_path.clone(),
+        key: "llm.context_length".to_string(),
+        output: out_path.clone(),
+        force: true,
+        backup: false,
         dry_run: false,
     };
     run(&args).expect("remove should succeed");
@@ -46,11 +42,11 @@ fn remove_decrements_metadata_count() {
     let out_path = out_tmp.path().to_path_buf();
 
     let args = RemoveArgs {
-        file:    src_path.clone(),
-        key:     "general.name".to_string(),
-        output:  out_path.clone(),
-        force:   true,
-        backup:  false,
+        file: src_path.clone(),
+        key: "general.name".to_string(),
+        output: out_path.clone(),
+        force: true,
+        backup: false,
         dry_run: false,
     };
     run(&args).expect("remove should succeed");
@@ -66,11 +62,11 @@ fn remove_other_keys_are_preserved() {
     let out_path = out_tmp.path().to_path_buf();
 
     let args = RemoveArgs {
-        file:    src_path.clone(),
-        key:     "llm.context_length".to_string(),
-        output:  out_path.clone(),
-        force:   true,
-        backup:  false,
+        file: src_path.clone(),
+        key: "llm.context_length".to_string(),
+        output: out_path.clone(),
+        force: true,
+        backup: false,
         dry_run: false,
     };
     run(&args).expect("remove should succeed");
@@ -86,11 +82,11 @@ fn remove_missing_key_errors() {
     let out_tmp = output_tmp();
 
     let args = RemoveArgs {
-        file:    src_path.clone(),
-        key:     "does.not.exist".to_string(),
-        output:  out_tmp.path().to_path_buf(),
-        force:   false,
-        backup:  false,
+        file: src_path.clone(),
+        key: "does.not.exist".to_string(),
+        output: out_tmp.path().to_path_buf(),
+        force: false,
+        backup: false,
         dry_run: false,
     };
     assert!(run(&args).is_err(), "removing absent key must return Err");
@@ -103,13 +99,16 @@ fn remove_dry_run_does_not_write_file() {
     let _ = std::fs::remove_file(&out_path);
 
     let args = RemoveArgs {
-        file:    src_path.clone(),
-        key:     "general.name".to_string(),
-        output:  out_path.clone(),
-        force:   true,
-        backup:  false,
+        file: src_path.clone(),
+        key: "general.name".to_string(),
+        output: out_path.clone(),
+        force: true,
+        backup: false,
         dry_run: true,
     };
     run(&args).expect("dry-run should return Ok");
-    assert!(!out_path.exists(), "dry-run must not create the output file");
+    assert!(
+        !out_path.exists(),
+        "dry-run must not create the output file"
+    );
 }

@@ -254,9 +254,14 @@ mod tests {
 
     #[test]
     fn meta_filter_flag_parses() {
-        let cli =
-            Cli::try_parse_from(["gguf-analyzer", "meta", "/tmp/m.gguf", "--filter", "llama.*"])
-                .unwrap();
+        let cli = Cli::try_parse_from([
+            "gguf-analyzer",
+            "meta",
+            "/tmp/m.gguf",
+            "--filter",
+            "llama.*",
+        ])
+        .unwrap();
         if let Command::Meta(args) = cli.command {
             assert_eq!(args.filter.as_deref(), Some("llama.*"));
         } else {
@@ -278,8 +283,10 @@ mod tests {
             "gguf-analyzer",
             "set",
             "/tmp/m.gguf",
-            "--key", "general.name",
-            "--value", "MyModel",
+            "--key",
+            "general.name",
+            "--value",
+            "MyModel",
             "--type",
             "string",
             "--output",
@@ -298,8 +305,10 @@ mod tests {
             "gguf-analyzer",
             "set",
             "/tmp/m.gguf",
-            "--key", "general.name",
-            "--value", "MyModel",
+            "--key",
+            "general.name",
+            "--value",
+            "MyModel",
             "--type",
             "string",
             "--output",

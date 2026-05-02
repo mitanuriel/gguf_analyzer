@@ -9,9 +9,12 @@ use crate::{
     gguf::ParsedGguf,
 };
 use tabled::{
-    builder::Builder,
-    settings::{object::{Columns, Rows}, Color, Modify, Style},
     Table,
+    builder::Builder,
+    settings::{
+        Color, Modify, Style,
+        object::{Columns, Rows},
+    },
 };
 
 /// Run the `info` subcommand.
@@ -30,13 +33,20 @@ fn info_table(gguf: &ParsedGguf, _width: usize) -> Table {
     let mut builder = Builder::new();
     builder.push_record(["Field", "Value"]);
     let rows: &[(&str, String)] = &[
-        ("File",               gguf.path.display().to_string()),
-        ("File size",          format_bytes(gguf.file_size)),
-        ("GGUF version",       gguf.version.to_string()),
-        ("Tensor count",       gguf.tensor_count.to_string()),
-        ("Metadata entries",   gguf.metadata.len().to_string()),
-        ("Alignment",          format!("{} bytes", gguf.alignment)),
-        ("Tensor data offset", format!("{:#010x}  ({})", gguf.tensor_data_offset, format_bytes(gguf.tensor_data_offset))),
+        ("File", gguf.path.display().to_string()),
+        ("File size", format_bytes(gguf.file_size)),
+        ("GGUF version", gguf.version.to_string()),
+        ("Tensor count", gguf.tensor_count.to_string()),
+        ("Metadata entries", gguf.metadata.len().to_string()),
+        ("Alignment", format!("{} bytes", gguf.alignment)),
+        (
+            "Tensor data offset",
+            format!(
+                "{:#010x}  ({})",
+                gguf.tensor_data_offset,
+                format_bytes(gguf.tensor_data_offset)
+            ),
+        ),
     ];
     for (field, value) in rows {
         builder.push_record([*field, value.as_str()]);
@@ -56,7 +66,9 @@ mod tests {
 
     #[test]
     fn info_on_missing_file_returns_error() {
-        let args = InfoArgs { file: PathBuf::from("/no/such/file.gguf") };
+        let args = InfoArgs {
+            file: PathBuf::from("/no/such/file.gguf"),
+        };
         assert!(run(&args).is_err());
     }
 }

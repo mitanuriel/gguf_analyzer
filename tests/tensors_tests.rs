@@ -2,10 +2,7 @@
 
 mod common;
 
-use gguf_analyzer::{
-    display::format_shape,
-    gguf::ParsedGguf,
-};
+use gguf_analyzer::{display::format_shape, gguf::ParsedGguf};
 use glob::Pattern;
 
 // ── Fixture tensor assertions ─────────────────────────────────────────────────

@@ -1,5 +1,11 @@
 # gguf-analyzer
 
+[![CI](https://github.com/mitanuriel/gguf_analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/mitanuriel/gguf_analyzer/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/mitanuriel/gguf_analyzer?include_prereleases&sort=semver)](https://github.com/mitanuriel/gguf_analyzer/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/mitanuriel/gguf_analyzer/total)](https://github.com/mitanuriel/gguf_analyzer/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Rust 2024](https://img.shields.io/badge/rust-2024-orange.svg)](https://www.rust-lang.org)
+
 A fast, colourful CLI tool for exploring and editing the metadata of
 [GGUF](https://github.com/ggerganov/ggml/blob/master/docs/gguf.md) model files —
 the format used by llama.cpp, Ollama, LM Studio, and most local AI tools.
@@ -27,24 +33,44 @@ Writes are always to a **new output file** — the source is never touched.
 
 ## Installation
 
-### Option A — Download a pre-built binary (no Rust required)
+### Option A — One-line install script (easiest, no Rust required)
+
+**macOS / Linux:**
+
+```bash
+curl -LsSf https://github.com/mitanuriel/gguf_analyzer/releases/latest/download/gguf_analyzer-installer.sh | sh
+```
+
+**Windows (PowerShell):**
+
+```powershell
+powershell -c "irm https://github.com/mitanuriel/gguf_analyzer/releases/latest/download/gguf_analyzer-installer.ps1 | iex"
+```
+
+The script downloads the right binary for your platform, verifies checksums, and drops `gguf-analyzer` into `~/.cargo/bin/` (or `%USERPROFILE%\.cargo\bin\` on Windows). Add that directory to your `PATH` if it isn't already.
+
+---
+
+### Option B — Download a pre-built binary manually
 
 Go to the [**Releases page**](https://github.com/mitanuriel/gguf_analyzer/releases) and
 download the archive for your platform:
 
 | Platform | File to download |
 |---|---|
-| macOS (Apple Silicon M1/M2/M3) | `gguf-analyzer-aarch64-apple-darwin.tar.gz` |
-| macOS (Intel) | `gguf-analyzer-x86_64-apple-darwin.tar.gz` |
-| Linux (x86-64) | `gguf-analyzer-x86_64-unknown-linux-gnu.tar.gz` |
-| Linux (ARM64) | `gguf-analyzer-aarch64-unknown-linux-gnu.tar.gz` |
-| Windows (64-bit) | `gguf-analyzer-x86_64-pc-windows-msvc.zip` |
+| macOS (Apple Silicon M1/M2/M3) | `gguf_analyzer-aarch64-apple-darwin.tar.xz` |
+| macOS (Intel) | `gguf_analyzer-x86_64-apple-darwin.tar.xz` |
+| Linux (x86-64) | `gguf_analyzer-x86_64-unknown-linux-gnu.tar.xz` |
+| Linux (ARM64) | `gguf_analyzer-aarch64-unknown-linux-gnu.tar.xz` |
+| Windows (64-bit) | `gguf_analyzer-x86_64-pc-windows-msvc.zip` |
+
+Each archive has a sibling `<file>.sha256` for checksum verification.
 
 **macOS / Linux:**
 
 ```bash
 # Unpack (replace filename with the one you downloaded)
-tar -xzf gguf-analyzer-aarch64-apple-darwin.tar.gz
+tar -xJf gguf_analyzer-aarch64-apple-darwin.tar.xz
 chmod +x gguf-analyzer
 # Put it somewhere on your PATH
 sudo mv gguf-analyzer /usr/local/bin/
@@ -64,7 +90,7 @@ gguf-analyzer --version
 
 ---
 
-### Option B — Install from source (requires Rust)
+### Option C — Install from source (requires Rust)
 
 ```bash
 # Install Rust: https://rustup.rs

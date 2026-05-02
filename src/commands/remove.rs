@@ -12,7 +12,7 @@ use crate::{
     cli::RemoveArgs,
     display::format_value,
     error::AppError,
-    gguf::{backup_if_exists, write_modified_gguf, ParsedGguf},
+    gguf::{ParsedGguf, backup_if_exists, write_modified_gguf},
 };
 
 /// Run the `remove` subcommand.
@@ -42,18 +42,17 @@ pub fn run(args: &RemoveArgs) -> anyhow::Result<()> {
 
     // ── Guard output file ────────────────────────────────────────────────────
     if args.output.exists() && !args.force {
-        return Err(AppError::OutputExists { path: args.output.clone() }.into());
+        return Err(AppError::OutputExists {
+            path: args.output.clone(),
+        }
+        .into());
     }
 
     // ── Optional backup of existing output ───────────────────────────────────
     if args.backup
         && let Some(bak) = backup_if_exists(&args.output)?
     {
-        eprintln!(
-            "{} '{}'",
-            "Backup :".blue().bold(),
-            bak.display()
-        );
+        eprintln!("{} '{}'", "Backup :".blue().bold(), bak.display());
     }
 
     // ── Apply the change ─────────────────────────────────────────────────────
@@ -91,11 +90,11 @@ mod tests {
     #[test]
     fn remove_on_missing_file_errors() {
         let args = RemoveArgs {
-            file:    PathBuf::from("/no/such/file.gguf"),
-            key:     "general.name".to_string(),
-            output:  PathBuf::from("/tmp/out.gguf"),
-            force:   false,
-        backup:  false,
+            file: PathBuf::from("/no/such/file.gguf"),
+            key: "general.name".to_string(),
+            output: PathBuf::from("/tmp/out.gguf"),
+            force: false,
+            backup: false,
             dry_run: false,
         };
         assert!(run(&args).is_err());

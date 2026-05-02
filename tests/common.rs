@@ -14,12 +14,8 @@ use std::path::PathBuf;
 
 use gguf_rs_lib::{
     format::metadata::{Metadata, MetadataValue},
-    tensor::{
-        data::TensorData,
-        info::TensorInfo,
-        shape::TensorShape,
-    },
     format::types::GGUFTensorType,
+    tensor::{data::TensorData, info::TensorInfo, shape::TensorShape},
     writer::file_writer::GGUFFileWriter,
 };
 use tempfile::NamedTempFile;
@@ -38,15 +34,17 @@ pub fn minimal_gguf() -> (NamedTempFile, PathBuf) {
         "general.name".to_string(),
         MetadataValue::String("test-model".to_string()),
     );
-    metadata.insert(
-        "llm.context_length".to_string(),
-        MetadataValue::U32(512),
-    );
+    metadata.insert("llm.context_length".to_string(), MetadataValue::U32(512));
 
     // 4 × 8 F32 tensor = 128 bytes
     let shape = TensorShape::new(vec![4, 8]).expect("valid shape");
     let data = TensorData::new_owned(vec![0u8; 128]);
-    let tensor = TensorInfo::new("token_embd.weight".to_string(), shape, GGUFTensorType::F32, 0);
+    let tensor = TensorInfo::new(
+        "token_embd.weight".to_string(),
+        shape,
+        GGUFTensorType::F32,
+        0,
+    );
     let tensors: Vec<(TensorInfo, TensorData)> = vec![(tensor, data)];
 
     let tmp = NamedTempFile::new().expect("temp file");
