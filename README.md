@@ -44,6 +44,8 @@ Writes are always to a **new output file** — the source is never touched.
 
 
 ### `apply-sampling` — bake recommended sampling params into a GGUF file
+<img width="666" height="461" alt="Screenshot 2026-05-02 at 10 04 13" src="https://github.com/user-attachments/assets/38da08bc-2ed5-491e-883a-970f28689135" />
+
 
 ---
 
