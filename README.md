@@ -20,16 +20,16 @@ Writes are always to a **new output file** — the source is never touched.
 
 ### `info` — file overview
 
-<img width="647" height="151" alt="Screenshot 2026-05-02 at 06 30 51" src="https://github.com/user-attachments/assets/3f36f45e-6863-43b0-a44f-2cfaceffbe43" />
+<img width="647" height="151" alt="gguf-analyzer info command showing file overview" src="https://github.com/user-attachments/assets/3f36f45e-6863-43b0-a44f-2cfaceffbe43" />
 
 ### `meta` — metadata table
 
-<img width="659" height="422" alt="Screenshot 2026-05-02 at 06 31 45" src="https://github.com/user-attachments/assets/7abcfb06-4263-472c-927b-51c17264d436" />
+<img width="659" height="422" alt="gguf-analyzer meta command showing metadata table" src="https://github.com/user-attachments/assets/7abcfb06-4263-472c-927b-51c17264d436" />
 
 
 ### `tensors` — tensor inventory
 
-<img width="580" height="282" alt="Screenshot 2026-05-02 at 06 28 46" src="https://github.com/user-attachments/assets/d8f695ff-941f-4cac-9935-a636099a905d" />
+<img width="580" height="282" alt="gguf-analyzer tensors command showing tensor inventory" src="https://github.com/user-attachments/assets/d8f695ff-941f-4cac-9935-a636099a905d" />
 
 
 ---
