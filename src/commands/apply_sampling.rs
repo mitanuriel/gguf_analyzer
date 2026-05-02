@@ -6,9 +6,13 @@
 //!    [`SamplingSet`] entries.
 //! 2. If multiple sets are found, `--mode <LABEL>` selects one; otherwise the
 //!    first set is used.
-//! 3. If no sampling parameters are found (or no `--repo` is given), the user
-//!    is prompted interactively for each parameter; blank input skips that key.
-//! 4. The resolved parameters are written into a new GGUF file at `--output`,
+//! 3. Regardless of `--repo`, if the GGUF file itself already contains
+//!    `general.sampling.*` metadata keys, those are offered as a "From file"
+//!    preset in the selection menu.
+//! 4. If no sampling parameters are found from either source (or no `--repo`
+//!    is given), the user is prompted interactively for each parameter; blank
+//!    input skips that key.
+//! 5. The resolved parameters are written into a new GGUF file at `--output`,
 //!    preserving all other metadata and tensor data unchanged.
 
 use anyhow::Context as _;
@@ -55,11 +59,14 @@ pub fn run(args: &ApplySamplingArgs) -> anyhow::Result<()> {
 
     let output = resolve_output(&args.file, args.output.as_deref(), "-sampled");
 
+    // ── Extract sampling params already embedded in the GGUF ─────────────────
+    let gguf_params = extract_gguf_sampling_params(&gguf);
+
     // ── Resolve sampling params ───────────────────────────────────────────────
     let params: HashMap<&'static str, MetadataValue> = if let Some(repo) = &args.repo {
-        resolve_from_repo(repo, args.mode.as_deref())?
+        resolve_from_repo(repo, args.mode.as_deref(), &gguf_params)?
     } else {
-        prompt_interactive()?
+        resolve_no_repo(&gguf_params)?
     };
 
     if params.is_empty() {
@@ -137,6 +144,7 @@ pub fn run(args: &ApplySamplingArgs) -> anyhow::Result<()> {
 fn resolve_from_repo(
     repo: &str,
     mode: Option<&str>,
+    gguf_params: &HashMap<&'static str, MetadataValue>,
 ) -> anyhow::Result<HashMap<&'static str, MetadataValue>> {
     let repo_id = hf::RepoId::parse(repo)
         .with_context(|| format!("invalid repo: '{repo}' — expected 'owner/repo'"))?;
@@ -150,9 +158,9 @@ fn resolve_from_repo(
     let Some(text) = readme else {
         eprintln!(
             "{}",
-            "No README found in repository — switching to interactive mode.".yellow()
+            "No README found in repository — checking file metadata.".yellow()
         );
-        return prompt_interactive();
+        return resolve_no_repo(gguf_params);
     };
 
     let card = ModelCard::parse(&text);
@@ -160,29 +168,57 @@ fn resolve_from_repo(
     if card.sampling_sets.is_empty() {
         eprintln!(
             "{}",
-            "No sampling parameters found in README — switching to interactive mode.".yellow()
+            "No sampling parameters found in README — checking file metadata.".yellow()
         );
-        return prompt_interactive();
+        return resolve_no_repo(gguf_params);
     }
 
     // Pick the appropriate set (or fall through to custom/interactive)
-    pick_set_menu(&card.sampling_sets, mode)
+    pick_set_menu(&card.sampling_sets, mode, gguf_params)
 }
 
-/// Present a clean three-category menu (Thinking / Non-Thinking / Custom) and
+// ── Resolve without a repo — GGUF file params or interactive ─────────────────
+
+fn resolve_no_repo(
+    gguf_params: &HashMap<&'static str, MetadataValue>,
+) -> anyhow::Result<HashMap<&'static str, MetadataValue>> {
+    if !gguf_params.is_empty() {
+        pick_set_menu(&[], None, gguf_params)
+    } else {
+        prompt_interactive()
+    }
+}
+
+/// Present a clean three-category menu (Thinking / Non-Thinking / From file / Custom) and
 /// return the resolved parameter map.
 ///
 /// If `--mode` was supplied on the CLI the menu is skipped and the matching set
 /// is used directly.  "custom" as the mode value always goes straight to the
-/// interactive prompt.
+/// interactive prompt.  "file" selects the parameters already embedded in the
+/// GGUF file.
 fn pick_set_menu(
     sets: &[SamplingSet],
     mode: Option<&str>,
+    gguf_params: &HashMap<&'static str, MetadataValue>,
 ) -> anyhow::Result<HashMap<&'static str, MetadataValue>> {
     // ── --mode shortcut ───────────────────────────────────────────────────────
     if let Some(label) = mode {
         if label.to_lowercase() == "custom" {
             return prompt_interactive();
+        }
+        if label.to_lowercase() == "file" {
+            if gguf_params.is_empty() {
+                anyhow::bail!(
+                    "'--mode file' requested but the GGUF file contains no embedded sampling parameters"
+                );
+            }
+            eprintln!(
+                "{}",
+                "Using sampling parameters embedded in the GGUF file."
+                    .cyan()
+                    .bold()
+            );
+            return Ok(gguf_params.clone());
         }
         let label_lower = label.to_lowercase();
         if let Some(s) = sets
@@ -212,9 +248,10 @@ fn pick_set_menu(
         .collect();
 
     // ── Build menu entries ────────────────────────────────────────────────────
-    // Each entry: (display label, Option<&SamplingSet>)
-    // None → custom / interactive
-    let mut entries: Vec<(&str, Option<&SamplingSet>)> = Vec::new();
+    // Each entry: (display label, Option<&SamplingSet>, is_from_file)
+    // None SamplingSet + is_from_file=true  → use gguf_params
+    // None SamplingSet + is_from_file=false → interactive prompt
+    let mut entries: Vec<(&str, Option<&SamplingSet>, bool)> = Vec::new();
 
     let thinking_set = thinking.first().copied();
     let non_thinking_set = non_thinking.first().copied();
@@ -223,22 +260,32 @@ fn pick_set_menu(
         entries.push((
             "Thinking mode    (focused reasoning, lower temperature)",
             thinking_set,
+            false,
         ));
     }
     if non_thinking_set.is_some() {
         entries.push((
             "Non-thinking mode  (fast conversational replies)",
             non_thinking_set,
+            false,
         ));
     }
     // Any sets that didn't match either category get their own numbered entries
     for s in sets.iter() {
         let lbl = s.label.to_lowercase();
         if !lbl.contains("thinking") && !lbl.contains("non") {
-            entries.push((&s.label, Some(s)));
+            entries.push((&s.label, Some(s), false));
         }
     }
-    entries.push(("Custom           (enter parameters manually)", None));
+    // Offer the GGUF file's own embedded params as a preset if present
+    if !gguf_params.is_empty() {
+        entries.push((
+            "From file        (parameters already embedded in the GGUF)",
+            None,
+            true,
+        ));
+    }
+    entries.push(("Custom           (enter parameters manually)", None, false));
 
     // ── Print menu ────────────────────────────────────────────────────────────
     eprintln!();
@@ -248,7 +295,7 @@ fn pick_set_menu(
             .cyan()
             .bold()
     );
-    for (i, (label, _)) in entries.iter().enumerate() {
+    for (i, (label, _, _)) in entries.iter().enumerate() {
         eprintln!(
             "{}  {}  {}",
             "│".cyan().bold(),
@@ -269,14 +316,23 @@ fn pick_set_menu(
     let idx: usize = line.trim().parse().unwrap_or(0);
     let idx = idx.min(entries.len() - 1);
 
-    let (chosen_label, chosen_set) = entries[idx];
+    let (chosen_label, chosen_set, is_from_file) = entries[idx];
 
-    match chosen_set {
-        None => {
+    match (chosen_set, is_from_file) {
+        (_, true) => {
+            eprintln!(
+                "{}",
+                "Using sampling parameters embedded in the GGUF file."
+                    .cyan()
+                    .bold()
+            );
+            Ok(gguf_params.clone())
+        }
+        (None, false) => {
             eprintln!();
             prompt_interactive()
         }
-        Some(s) => {
+        (Some(s), false) => {
             eprintln!(
                 "{} \"{}\"",
                 "Using preset:".cyan().bold(),
@@ -472,6 +528,117 @@ fn prompt_interactive() -> anyhow::Result<HashMap<&'static str, MetadataValue>> 
     Ok(map)
 }
 
+// ── Extract sampling params from GGUF metadata ────────────────────────────────
+//
+// Checks both the `llama.sampling.*` keys (written by this tool) and the
+// `general.sampling.*` keys (used by some quantisers such as Unsloth/imatrix),
+// mapping everything onto our canonical `llama.sampling.*` key set so the
+// values can be offered as a "From file" preset in the menu.
+//
+// llama.sampling.*  keys are checked first; general.sampling.* fill any gaps.
+//
+// Key mapping (general.* → llama.*):
+//   general.sampling.temp            → llama.sampling.temperature
+//   general.sampling.top_k           → llama.sampling.top_k
+//   general.sampling.top_p           → llama.sampling.top_p
+//   general.sampling.min_p           → llama.sampling.min_p
+//   general.sampling.penalty_repeat  → llama.sampling.repetition_penalty
+
+fn extract_gguf_sampling_params(gguf: &ParsedGguf) -> HashMap<&'static str, MetadataValue> {
+    let mut map = HashMap::new();
+
+    // Helper: coerce any numeric MetadataValue to f32
+    let to_f32 = |v: &MetadataValue| -> Option<f32> {
+        match v {
+            MetadataValue::F32(f) => Some(*f),
+            MetadataValue::F64(f) => Some(*f as f32),
+            MetadataValue::U8(n) => Some(*n as f32),
+            MetadataValue::I8(n) => Some(*n as f32),
+            MetadataValue::U16(n) => Some(*n as f32),
+            MetadataValue::I16(n) => Some(*n as f32),
+            MetadataValue::U32(n) => Some(*n as f32),
+            MetadataValue::I32(n) => Some(*n as f32),
+            MetadataValue::U64(n) => Some(*n as f32),
+            MetadataValue::I64(n) => Some(*n as f32),
+            _ => None,
+        }
+    };
+
+    // Helper: coerce any numeric MetadataValue to u32
+    let to_u32 = |v: &MetadataValue| -> Option<u32> {
+        match v {
+            MetadataValue::U32(n) => Some(*n),
+            MetadataValue::U8(n) => Some(*n as u32),
+            MetadataValue::U16(n) => Some(*n as u32),
+            MetadataValue::I32(n) => Some(*n as u32),
+            MetadataValue::I64(n) => Some(*n as u32),
+            MetadataValue::U64(n) => Some(*n as u32),
+            MetadataValue::F32(f) => Some(*f as u32),
+            _ => None,
+        }
+    };
+
+    // temperature (f32) — llama key takes priority over general key
+    for src in &["llama.sampling.temperature", "general.sampling.temp"] {
+        if let Some(v) = gguf.metadata.get(*src) {
+            if let Some(f) = to_f32(v) {
+                map.insert(KEY_TEMPERATURE, MetadataValue::F32(f));
+                break;
+            }
+        }
+    }
+    // top_p (f32)
+    for src in &["llama.sampling.top_p", "general.sampling.top_p"] {
+        if let Some(v) = gguf.metadata.get(*src) {
+            if let Some(f) = to_f32(v) {
+                map.insert(KEY_TOP_P, MetadataValue::F32(f));
+                break;
+            }
+        }
+    }
+    // min_p (f32)
+    for src in &["llama.sampling.min_p", "general.sampling.min_p"] {
+        if let Some(v) = gguf.metadata.get(*src) {
+            if let Some(f) = to_f32(v) {
+                map.insert(KEY_MIN_P, MetadataValue::F32(f));
+                break;
+            }
+        }
+    }
+    // top_k (u32)
+    for src in &["llama.sampling.top_k", "general.sampling.top_k"] {
+        if let Some(v) = gguf.metadata.get(*src) {
+            if let Some(n) = to_u32(v) {
+                map.insert(KEY_TOP_K, MetadataValue::U32(n));
+                break;
+            }
+        }
+    }
+    // repetition penalty (f32)
+    for src in &[
+        "llama.sampling.repetition_penalty",
+        "general.sampling.penalty_repeat",
+        "general.sampling.repeat_penalty",
+    ] {
+        if let Some(v) = gguf.metadata.get(*src) {
+            if let Some(f) = to_f32(v) {
+                map.insert(KEY_REPETITION_PENALTY, MetadataValue::F32(f));
+                break;
+            }
+        }
+    }
+
+    if !map.is_empty() {
+        eprintln!(
+            "{} {} sampling parameter(s) found in GGUF file metadata.",
+            "Info:".cyan().bold(),
+            map.len()
+        );
+    }
+
+    map
+}
+
 // ── Dry-run display ───────────────────────────────────────────────────────────
 
 fn print_params_table(params: &HashMap<&'static str, MetadataValue>, gguf: &ParsedGguf) {
@@ -575,7 +742,7 @@ mod tests {
                 None,
             ),
         ];
-        let map = pick_set_menu(&sets, Some("non-thinking")).unwrap();
+        let map = pick_set_menu(&sets, Some("non-thinking"), &HashMap::new()).unwrap();
         assert!(
             matches!(map.get(KEY_TEMPERATURE), Some(MetadataValue::F32(v)) if (*v - 0.7).abs() < 1e-5)
         );
@@ -595,7 +762,7 @@ mod tests {
                 None,
             ),
         ];
-        let map = pick_set_menu(&sets, Some("thinking")).unwrap();
+        let map = pick_set_menu(&sets, Some("thinking"), &HashMap::new()).unwrap();
         assert!(
             matches!(map.get(KEY_TEMPERATURE), Some(MetadataValue::F32(v)) if (*v - 0.6).abs() < 1e-5)
         );
@@ -607,7 +774,7 @@ mod tests {
             make_set("Alpha", None, None, None, None, None, None),
             make_set("Beta", None, None, None, None, None, None),
         ];
-        assert!(pick_set_menu(&sets, Some("gamma")).is_err());
+        assert!(pick_set_menu(&sets, Some("gamma"), &HashMap::new()).is_err());
     }
 
     #[test]
