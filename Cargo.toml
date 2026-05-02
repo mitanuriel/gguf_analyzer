@@ -16,7 +16,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # GGUF reading / writing
-gguf-rs-lib = { version = "0.2", features = ["mmap"] }
+gguf-rs-lib = { version = "0.2.5", features = ["mmap"] }
 
 # CLI argument parsing
 clap = { version = "4", features = ["derive", "env"] }
@@ -58,6 +58,11 @@ colored = "2"
 [dev-dependencies]
 # Temporary files for integration tests
 tempfile = "3"
+
+[patch.crates-io]
+# Raises GGUF_MAX_ARRAY_LENGTH from 65_536 → 524_288 to support models with
+# large tokenizer vocabularies (e.g. Qwen3 with 151_936-entry vocab arrays).
+gguf-rs-lib = { path = "vendor/gguf-rs-lib" }
 
 # The profile that 'dist' will build with
 [profile.dist]

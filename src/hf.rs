@@ -151,17 +151,17 @@ pub fn list_gguf_files(client: &Client, repo: &RepoId) -> anyhow::Result<Vec<Sib
 ///
 /// If `dest` is a directory the filename is inferred from the URL path.
 pub fn download(client: &Client, url: &str, dest: &Path, force: bool) -> anyhow::Result<PathBuf> {
-    // Resolve the destination path.
-    let out_path = if dest.is_dir() {
-        let filename = url
-            .rsplit('/')
-            .next()
-            .filter(|s| !s.is_empty())
-            .context("cannot infer filename from URL")?;
-        dest.join(filename)
-    } else {
-        dest.to_path_buf()
-    };
+    // `dest` is always treated as a directory — create it if it doesn't exist,
+    // then append the filename derived from the URL.
+    fs::create_dir_all(dest).with_context(|| format!("create directory '{}'", dest.display()))?;
+
+    let filename = url
+        .rsplit('/')
+        .next()
+        .filter(|s| !s.is_empty())
+        .context("cannot infer filename from URL")?;
+
+    let out_path = dest.join(filename);
 
     if out_path.exists() && !force {
         bail!(
@@ -200,11 +200,6 @@ pub fn download(client: &Client, url: &str, dest: &Path, force: bool) -> anyhow:
     );
 
     // Stream to file.
-    if let Some(parent) = out_path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("create directory '{}'", parent.display()))?;
-    }
-
     let mut file =
         fs::File::create(&out_path).with_context(|| format!("create '{}'", out_path.display()))?;
 

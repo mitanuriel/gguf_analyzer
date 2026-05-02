@@ -1,5 +1,6 @@
 //! Subcommand handlers — one module per subcommand.
 
+pub mod apply_sampling;
 pub mod export;
 pub mod fetch;
 pub mod info;

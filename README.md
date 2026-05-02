@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Rust 2024](https://img.shields.io/badge/rust-2024-orange.svg)](https://www.rust-lang.org)
 
-A fast, colourful CLI tool for exploring and editing the metadata of
+A fast CLI tool for exploring and editing the metadata of
 [GGUF](https://github.com/ggerganov/ggml/blob/master/docs/gguf.md) model files —
 the format used by llama.cpp, Ollama, LM Studio, and most local AI tools.
 
@@ -33,7 +33,7 @@ Writes are always to a **new output file** — the source is never touched.
 ### `fetch from HuggingFace` — downloading from Hugging Face repo
 <img width="255" height="86" alt="Screenshot 2026-05-02 at 07 25 16" src="https://github.com/user-attachments/assets/238dc9ee-61bf-4422-9714-bcd30724b6ae" />
 
-### `model card from HuggingFace` — moel data and recommended sampling parameters
+### `model card from HuggingFace` — model data and recommended sampling parameters
 <img width="403" height="273" alt="Screenshot 2026-05-02 at 07 24 33" src="https://github.com/user-attachments/assets/d393da92-4355-4847-b81b-dc52f99482b4" />
 
 <img width="642" height="655" alt="Screenshot 2026-05-02 at 07 26 33" src="https://github.com/user-attachments/assets/9607956b-b3cf-49e2-9961-eb09f92178af" />
@@ -42,6 +42,8 @@ Writes are always to a **new output file** — the source is never touched.
 
 
 
+
+### `apply-sampling` — bake recommended sampling params into a GGUF file
 
 ---
 
@@ -116,15 +118,23 @@ gguf-analyzer --version
 
 ---
 
+---
+
 ## Quick start
 
-Download any GGUF model (e.g. from [Hugging Face](https://huggingface.co/models?library=gguf))
-and run:
-
 ```bash
+# cd to your models folder — then you only need the filename
+cd ~/models/my-model
+
 gguf-analyzer info    model.gguf
 gguf-analyzer meta    model.gguf
 gguf-analyzer tensors model.gguf
+```
+
+Or download a model from Hugging Face first (replace `owner/repo` with the actual repo):
+
+```bash
+gguf-analyzer fetch owner/repo --file "*Q4_K_M*" --output-dir ~/models/my-model
 ```
 
 ---
@@ -137,6 +147,9 @@ gguf-analyzer tensors model.gguf
 - Add or change a metadata value without touching the weights (`set`)
 - Remove a metadata key (`remove`)
 - Export metadata to **JSON**, **Markdown**, or **CSV** (`export`)
+- Download GGUF files from Hugging Face (`fetch`)
+- View model card and recommended sampling parameters (`model-card`)
+- Bake sampling parameters directly into a GGUF file (`apply-sampling`)
 - Shell completions for bash, zsh, fish, and PowerShell (`completions`)
 - Structured tracing via `RUST_LOG`
 - ANSI-coloured output that respects `NO_COLOR`
@@ -162,13 +175,16 @@ gguf-analyzer meta model.gguf
 # Filter by glob (case-insensitive)
 gguf-analyzer meta model.gguf --filter "general.*"
 
-# Limit array preview and filter
+# Substring match — wrap in * on both sides
+gguf-analyzer meta model.gguf --filter "*attn*"
+
+# Limit array preview
 gguf-analyzer meta model.gguf --filter "tokenizer.*" --array-limit 5
 ```
 
 | Flag | Description | Default |
 |---|---|---|
-| `--filter <GLOB>` | Glob pattern, e.g. `"llama.*"` | show all |
+| `--filter <GLOB>` | Glob pattern. Use `*keyword*` for substring match, `general.*` for prefix. | show all |
 | `--array-limit <N>` | Max array items shown per cell | `8` |
 
 ---
@@ -183,32 +199,31 @@ gguf-analyzer tensors model.gguf --filter "*attn_q*"
 
 | Flag | Description | Default |
 |---|---|---|
-| `--filter <GLOB>` | Glob pattern, e.g. `"blk.0.*"` | show all |
+| `--filter <GLOB>` | Glob pattern. Use `*keyword*` for substring match. | show all |
 
 ---
 
 ### `set` — set or add a metadata value
 
-The source file is **never modified**. Always pass `--output`.
+The source file is **never modified**. Output defaults to `<stem>-modified.gguf` in the same folder as the source.
 
 ```bash
-# Preview with --dry-run
+# Preview first with --dry-run (no --output needed)
 gguf-analyzer set model.gguf \
-  --key general.name \
-  --value "my-custom-model" \
-  --type string \
-  --output tagged.gguf \
-  --dry-run
+  --key general.name --value "my-custom-model" --type string --dry-run
 
-# Apply
+# Apply — output auto-named model-modified.gguf
 gguf-analyzer set model.gguf \
-  --key general.name --value "my-custom-model" \
-  --type string --output tagged.gguf
+  --key general.name --value "my-custom-model" --type string
+
+# Explicit output path
+gguf-analyzer set model.gguf \
+  --key general.name --value "my-custom-model" --type string \
+  --output tagged.gguf
 
 # Add a brand-new key (requires --force)
 gguf-analyzer set model.gguf \
-  --key custom.build_date --value "2026-05-01" \
-  --type string --output tagged.gguf --force
+  --key custom.build_date --value "2026-05-01" --type string --force
 ```
 
 | Flag | Description | Required |
@@ -216,22 +231,25 @@ gguf-analyzer set model.gguf \
 | `--key <KEY>` | Metadata key to write | ✓ |
 | `--value <VALUE>` | New value | ✓ |
 | `-t, --type <TYPE>` | `u8` `i8` `u16` `i16` `u32` `i32` `f32` `u64` `i64` `f64` `bool` `string` | ✓ |
-| `-o, --output <FILE>` | Output file path | ✓ |
+| `-o, --output <FILE>` | Output path — defaults to `<stem>-modified.gguf` | — |
 | `--force` | Allow new key or overwrite existing output | — |
-| `--backup` | Before overwriting `<output>`, rename existing file to `<output>.bak` | — |
+| `--backup` | Rename existing output to `<output>.bak` before writing | — |
 | `--dry-run` | Preview without writing | — |
 
 ---
 
 ### `remove` — remove a metadata key
 
+The source file is **never modified**. Output defaults to `<stem>-modified.gguf`.
+
 ```bash
 # Preview
-gguf-analyzer remove model.gguf \
-  --key general.quantization_version \
-  --output trimmed.gguf --dry-run
+gguf-analyzer remove model.gguf --key general.quantization_version --dry-run
 
-# Apply
+# Apply — output auto-named model-modified.gguf
+gguf-analyzer remove model.gguf --key general.quantization_version
+
+# Explicit output path
 gguf-analyzer remove model.gguf \
   --key general.quantization_version --output trimmed.gguf
 ```
@@ -239,9 +257,9 @@ gguf-analyzer remove model.gguf \
 | Flag | Description | Required |
 |---|---|---|
 | `--key <KEY>` | Key to delete | ✓ |
-| `-o, --output <FILE>` | Output file path | ✓ |
+| `-o, --output <FILE>` | Output path — defaults to `<stem>-modified.gguf` | — |
 | `--force` | Overwrite output if it exists | — |
-| `--backup` | Before overwriting `<output>`, rename existing file to `<output>.bak` | — |
+| `--backup` | Rename existing output to `<output>.bak` before writing | — |
 | `--dry-run` | Preview without writing | — |
 
 ---
@@ -249,8 +267,13 @@ gguf-analyzer remove model.gguf \
 ### `export` — export metadata
 
 ```bash
+# JSON to stdout
 gguf-analyzer export model.gguf --format json
+
+# Markdown to file
 gguf-analyzer export model.gguf --format markdown --output meta.md
+
+# CSV to file
 gguf-analyzer export model.gguf --format csv --output meta.csv
 ```
 
@@ -259,6 +282,83 @@ gguf-analyzer export model.gguf --format csv --output meta.csv
 | `-f, --format` | `json` \| `markdown` \| `csv` | `json` |
 | `-o, --output <FILE>` | Write to file instead of stdout | stdout |
 | `--array-limit <N>` | Max array items per value | `8` |
+
+---
+
+### `fetch` — download from Hugging Face
+
+```bash
+# Interactive file picker
+gguf-analyzer fetch Qwen/Qwen3-0.6B-GGUF
+
+# List available files without downloading
+gguf-analyzer fetch Qwen/Qwen3-0.6B-GGUF --list
+
+# Download a specific quantisation, save to a folder
+gguf-analyzer fetch Qwen/Qwen3-0.6B-GGUF --file "*Q4_K_M*" --output-dir ~/models
+
+# Direct URL
+gguf-analyzer fetch https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf
+```
+
+| Flag | Description | Default |
+|---|---|---|
+| `-l, --list` | List available files, don't download | — |
+| `-f, --file <PATTERN>` | Glob pattern to select file, e.g. `*Q4_K_M*` | interactive prompt |
+| `-o, --output-dir <DIR>` | Directory to save into (created automatically if missing) | current directory |
+| `--force` | Overwrite if file already exists | — |
+
+---
+
+### `model-card` — view model card from Hugging Face
+
+Fetches the model's README and parses the overview, architecture details, and any recommended sampling parameters.
+
+```bash
+gguf-analyzer model-card owner/repo
+
+# Machine-readable JSON output
+gguf-analyzer model-card owner/repo --json
+```
+
+| Flag | Description |
+|---|---|
+| `--json` | Output as JSON instead of a human-readable table |
+
+---
+
+### `apply-sampling` — bake sampling parameters into a GGUF file
+
+Reads recommended sampling parameters from a model card and writes them as metadata keys into a new GGUF file. Falls back to an interactive prompt if no recommendations are found.
+
+The source file is **never modified**. Output defaults to `<stem>-sampled.gguf`.
+
+```bash
+# Pull params from model card, interactive set picker
+gguf-analyzer apply-sampling model.gguf --repo owner/repo
+
+# Select a specific mode (e.g. thinking / non-thinking)
+gguf-analyzer apply-sampling model.gguf --repo owner/repo --mode thinking
+
+# Preview without writing
+gguf-analyzer apply-sampling model.gguf --repo owner/repo --dry-run
+
+# Enter all parameters manually (no repo needed)
+gguf-analyzer apply-sampling model.gguf
+
+# Explicit output path
+gguf-analyzer apply-sampling model.gguf --repo owner/repo \
+  --output model-thinking.gguf
+```
+
+| Flag | Description | Default |
+|---|---|---|
+| `--repo <REPO>` | Hugging Face repo to fetch params from (`owner/repo` or full URL) | interactive prompts |
+| `--mode <LABEL>` | Which sampling set to apply when multiple are available (e.g. `thinking`, `non-thinking`) | first set found |
+| `-o, --output <FILE>` | Output path — defaults to `<stem>-sampled.gguf` | — |
+| `--force` | Overwrite output if it already exists | — |
+| `--backup` | Rename existing output to `<output>.bak` before writing | — |
+| `--dry-run` | Show what would be written without writing | — |
 
 ---
 
@@ -277,7 +377,7 @@ gguf-analyzer completions powershell >> $PROFILE
 
 | Variable | Description |
 |---|---|
-| `RUST_LOG` | Tracing level. `RUST_LOG=debug gguf-analyzer info model.gguf` prints spans to stderr. Values: `error` · `warn` (default) · `info` · `debug` · `trace`. |
+| `RUST_LOG` | Tracing level — `error` · `warn` (default) · `info` · `debug` · `trace`. Example: `RUST_LOG=debug gguf-analyzer info model.gguf` |
 | `NO_COLOR` | Set to any value to disable ANSI colour output. |
 
 ---
@@ -285,8 +385,7 @@ gguf-analyzer completions powershell >> $PROFILE
 ## Releasing a new version
 
 This project uses [cargo-dist](https://github.com/axodotdev/cargo-dist).
-Binaries for all five platforms are built automatically by GitHub Actions
-whenever a version tag is pushed.
+Binaries for all five platforms are built automatically by GitHub Actions whenever a version tag is pushed.
 
 ```bash
 # 1. Bump version in Cargo.toml, commit
@@ -312,6 +411,8 @@ GitHub will build the binaries and attach them to the Releases page. Done.
 | `tracing` + `tracing-subscriber` | Structured levelled diagnostics |
 | `anyhow` + `thiserror` | Error handling |
 | `serde_json` | JSON export |
+| `reqwest` | Hugging Face API and file downloads |
+| `indicatif` | Download progress bar |
 | `glob` | Glob pattern filtering |
 | `terminal_size` | Terminal width detection |
 | `cargo-dist` | Cross-platform release automation |

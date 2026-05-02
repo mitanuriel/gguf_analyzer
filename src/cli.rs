@@ -56,6 +56,15 @@ pub enum Command {
     /// parameters from the repository README.
     ModelCard(ModelCardArgs),
 
+    /// Apply recommended sampling parameters to a GGUF file.
+    ///
+    /// If a HuggingFace repo is supplied, sampling parameters are read from
+    /// the model card README.  If no recommendations are found (or no repo is
+    /// given), an interactive prompt collects each parameter one by one.
+    ///
+    /// Writes are always to a new `--output` file; the source is never mutated.
+    ApplySampling(ApplySamplingArgs),
+
     /// Print shell completion script to stdout.
     Completions(CompletionsArgs),
 }
@@ -77,7 +86,15 @@ pub struct MetaArgs {
 
     /// Filter keys using a glob pattern (case-insensitive).
     ///
-    /// Examples: `general.*`, `llama.*`, `tokenizer.ggml.*`
+    /// Uses shell-style wildcards: `*` matches any sequence of characters,
+    /// `?` matches a single character.
+    ///
+    /// To match a substring, wrap it in `*`: `--filter "*attention*"`
+    ///
+    /// Examples:
+    ///   `general.*`         — all keys that start with "general."
+    ///   `*attention*`       — any key containing "attention"
+    ///   `llama.sampling.*`  — all llama sampling hints
     #[arg(short, long, value_name = "PATTERN")]
     pub filter: Option<String>,
 
@@ -94,6 +111,16 @@ pub struct TensorsArgs {
     pub file: PathBuf,
 
     /// Filter tensor names using a glob pattern (case-insensitive).
+    ///
+    /// Uses shell-style wildcards: `*` matches any sequence of characters,
+    /// `?` matches a single character.
+    ///
+    /// To match a substring, wrap it in `*`: `--filter "*attn*"`
+    ///
+    /// Examples:
+    ///   `blk.0.*`    — all tensors in the first block
+    ///   `*norm*`     — any tensor whose name contains "norm"
+    ///   `token_embd*` — the token embedding tensor
     #[arg(short, long, value_name = "PATTERN")]
     pub filter: Option<String>,
 }
@@ -118,8 +145,11 @@ pub struct SetArgs {
     pub r#type: ValueType,
 
     /// Destination path for the new GGUF file.
+    ///
+    /// Defaults to `<source-stem>-modified.gguf` in the same directory as the
+    /// source file.  Example: `model.gguf` → `model-modified.gguf`.
     #[arg(short, long, value_name = "FILE")]
-    pub output: PathBuf,
+    pub output: Option<PathBuf>,
 
     /// Overwrite the output file if it already exists.
     #[arg(long)]
@@ -151,8 +181,11 @@ pub struct RemoveArgs {
     pub key: String,
 
     /// Destination path for the new GGUF file.
+    ///
+    /// Defaults to `<source-stem>-modified.gguf` in the same directory as the
+    /// source file.  Example: `model.gguf` → `model-modified.gguf`.
     #[arg(short, long, value_name = "FILE")]
-    pub output: PathBuf,
+    pub output: Option<PathBuf>,
 
     /// Overwrite the output file if it already exists.
     #[arg(long)]
@@ -217,7 +250,12 @@ pub struct FetchArgs {
     #[arg(short, long, value_name = "PATTERN")]
     pub file: Option<String>,
 
-    /// Directory to save the downloaded file (default: current directory).
+    /// Directory to save the downloaded file.
+    ///
+    /// The directory is created automatically if it does not exist.
+    /// Defaults to the current working directory.
+    ///
+    /// Example: `--output-dir ~/models`
     #[arg(short, long, value_name = "DIR")]
     pub output_dir: Option<std::path::PathBuf>,
 
@@ -240,6 +278,51 @@ pub struct ModelCardArgs {
     /// Output the parsed model card as JSON instead of a human-readable table.
     #[arg(long)]
     pub json: bool,
+}
+
+// ── apply-sampling ────────────────────────────────────────────────────────────
+
+#[derive(Debug, Parser)]
+pub struct ApplySamplingArgs {
+    /// Path to the GGUF file to update.
+    pub file: PathBuf,
+
+    /// HuggingFace repo to fetch sampling recommendations from.
+    ///
+    /// Examples:
+    ///   `Qwen/Qwen3-0.6B-GGUF`
+    ///   `https://huggingface.co/Qwen/Qwen3-0.6B-GGUF`
+    ///
+    /// If omitted, interactive prompts are shown for all parameters.
+    #[arg(long, value_name = "REPO")]
+    pub repo: Option<String>,
+
+    /// Which sampling set to apply when multiple are found in the README
+    /// (e.g. "thinking", "non-thinking"). Defaults to the first set found.
+    #[arg(long, value_name = "LABEL")]
+    pub mode: Option<String>,
+
+    /// Destination path for the updated GGUF file.
+    ///
+    /// Defaults to `<source-stem>-sampled.gguf` in the same directory as the
+    /// source file.  Example: `model.gguf` → `model-sampled.gguf`.
+    ///
+    /// Use the same path as `<FILE>` to edit in-place (combine with `--backup`
+    /// to keep a `.bak` copy of the original).
+    #[arg(short, long, value_name = "FILE")]
+    pub output: Option<PathBuf>,
+
+    /// Overwrite the output file if it already exists.
+    #[arg(long)]
+    pub force: bool,
+
+    /// Before overwriting, rename the existing output file to `<output>.bak`.
+    #[arg(long)]
+    pub backup: bool,
+
+    /// Show what would be written without writing any files.
+    #[arg(long)]
+    pub dry_run: bool,
 }
 
 // ── completions ───────────────────────────────────────────────────────────────

@@ -1,0 +1,33 @@
+# rustfmt configuration for gguf_rs
+# See https://rust-lang.github.io/rustfmt/ for full configuration options
+
+# Stable features only
+edition = "2021"
+max_width = 100
+hard_tabs = false
+tab_spaces = 4
+
+# Code formatting
+fn_call_width = 80
+attr_fn_like_width = 80
+struct_lit_width = 80
+struct_variant_width = 80
+array_width = 80
+chain_width = 80
+single_line_if_else_max_width = 80
+
+# Imports - basic stable options only
+reorder_imports = true
+
+# Function definitions - stable options only
+fn_params_layout = "Tall"
+
+# Misc formatting - stable options only
+remove_nested_parens = true
+use_field_init_shorthand = true
+force_explicit_abi = true
+
+# Match formatting - stable options only
+match_block_trailing_comma = false
+
+# All other options are unstable and removed to avoid warnings
