@@ -338,41 +338,13 @@ fn extract_params_from_line(line: &str, set: &mut SamplingSet) {
             && let Some(val) = extract_numeric_value(line, needle)
         {
             match *field {
-                "temperature" => {
-                    if set.temperature.is_none() {
-                        set.temperature = Some(val);
-                    }
-                }
-                "top_p" => {
-                    if set.top_p.is_none() {
-                        set.top_p = Some(val);
-                    }
-                }
-                "top_k" => {
-                    if set.top_k.is_none() {
-                        set.top_k = Some(val);
-                    }
-                }
-                "min_p" => {
-                    if set.min_p.is_none() {
-                        set.min_p = Some(val);
-                    }
-                }
-                "presence_penalty" => {
-                    if set.presence_penalty.is_none() {
-                        set.presence_penalty = Some(val);
-                    }
-                }
-                "repetition_penalty" => {
-                    if set.repetition_penalty.is_none() {
-                        set.repetition_penalty = Some(val);
-                    }
-                }
-                "max_tokens" => {
-                    if set.max_tokens.is_none() {
-                        set.max_tokens = Some(val);
-                    }
-                }
+                "temperature" => _ = set.temperature.get_or_insert(val),
+                "top_p" => _ = set.top_p.get_or_insert(val),
+                "top_k" => _ = set.top_k.get_or_insert(val),
+                "min_p" => _ = set.min_p.get_or_insert(val),
+                "presence_penalty" => _ = set.presence_penalty.get_or_insert(val),
+                "repetition_penalty" => _ = set.repetition_penalty.get_or_insert(val),
+                "max_tokens" => _ = set.max_tokens.get_or_insert(val),
                 _ => {}
             }
         }
