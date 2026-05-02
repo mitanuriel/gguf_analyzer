@@ -41,7 +41,10 @@ mod tests {
     fn derives_sibling_with_suffix() {
         let src = PathBuf::from("/models/qwen/Qwen3-0.6B-Q8_0.gguf");
         let out = resolve_output(&src, None, "-sampled");
-        assert_eq!(out, PathBuf::from("/models/qwen/Qwen3-0.6B-Q8_0-sampled.gguf"));
+        assert_eq!(
+            out,
+            PathBuf::from("/models/qwen/Qwen3-0.6B-Q8_0-sampled.gguf")
+        );
     }
 
     #[test]

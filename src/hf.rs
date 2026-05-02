@@ -153,8 +153,7 @@ pub fn list_gguf_files(client: &Client, repo: &RepoId) -> anyhow::Result<Vec<Sib
 pub fn download(client: &Client, url: &str, dest: &Path, force: bool) -> anyhow::Result<PathBuf> {
     // `dest` is always treated as a directory — create it if it doesn't exist,
     // then append the filename derived from the URL.
-    fs::create_dir_all(dest)
-        .with_context(|| format!("create directory '{}'", dest.display()))?;
+    fs::create_dir_all(dest).with_context(|| format!("create directory '{}'", dest.display()))?;
 
     let filename = url
         .rsplit('/')

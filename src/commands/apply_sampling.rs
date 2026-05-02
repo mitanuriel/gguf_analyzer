@@ -202,7 +202,9 @@ fn pick_set_menu(
     // ── Classify each set ─────────────────────────────────────────────────────
     let thinking: Vec<&SamplingSet> = sets
         .iter()
-        .filter(|s| s.label.to_lowercase().contains("thinking") && !s.label.to_lowercase().contains("non"))
+        .filter(|s| {
+            s.label.to_lowercase().contains("thinking") && !s.label.to_lowercase().contains("non")
+        })
         .collect();
     let non_thinking: Vec<&SamplingSet> = sets
         .iter()
@@ -218,10 +220,16 @@ fn pick_set_menu(
     let non_thinking_set = non_thinking.first().copied();
 
     if thinking_set.is_some() {
-        entries.push(("Thinking mode    (focused reasoning, lower temperature)", thinking_set));
+        entries.push((
+            "Thinking mode    (focused reasoning, lower temperature)",
+            thinking_set,
+        ));
     }
     if non_thinking_set.is_some() {
-        entries.push(("Non-thinking mode  (fast conversational replies)", non_thinking_set));
+        entries.push((
+            "Non-thinking mode  (fast conversational replies)",
+            non_thinking_set,
+        ));
     }
     // Any sets that didn't match either category get their own numbered entries
     for s in sets.iter() {
@@ -234,15 +242,26 @@ fn pick_set_menu(
 
     // ── Print menu ────────────────────────────────────────────────────────────
     eprintln!();
-    eprintln!("{}", "┌─ Sampling preset ────────────────────────────────────────┐".cyan().bold());
+    eprintln!(
+        "{}",
+        "┌─ Sampling preset ────────────────────────────────────────┐"
+            .cyan()
+            .bold()
+    );
     for (i, (label, _)) in entries.iter().enumerate() {
-        eprintln!("{}  {}  {}",
+        eprintln!(
+            "{}  {}  {}",
             "│".cyan().bold(),
             format!("[{}]", i).bold(),
             label,
         );
     }
-    eprintln!("{}", "└──────────────────────────────────────────────────────────┘".cyan().bold());
+    eprintln!(
+        "{}",
+        "└──────────────────────────────────────────────────────────┘"
+            .cyan()
+            .bold()
+    );
     eprint!("Choose (0–{}, default 0): ", entries.len() - 1);
 
     let mut line = String::new();
@@ -258,7 +277,11 @@ fn pick_set_menu(
             prompt_interactive()
         }
         Some(s) => {
-            eprintln!("{} \"{}\"", "Using preset:".cyan().bold(), chosen_label.trim());
+            eprintln!(
+                "{} \"{}\"",
+                "Using preset:".cyan().bold(),
+                chosen_label.trim()
+            );
             Ok(sampling_set_to_map(s))
         }
     }
@@ -335,10 +358,24 @@ fn sampling_set_to_map(set: &SamplingSet) -> HashMap<&'static str, MetadataValue
 /// Each parameter is shown with a friendly description.
 /// Blank input skips that parameter.
 fn prompt_interactive() -> anyhow::Result<HashMap<&'static str, MetadataValue>> {
-    eprintln!("{}", "┌─ Custom sampling parameters ─────────────────────────────────────────────┐".cyan().bold());
-    eprintln!("{} Press {} to skip any field and keep it unchanged.                  {}",
-        "│".cyan().bold(), "Enter".bold(), "│".cyan().bold());
-    eprintln!("{}", "└───────────────────────────────────────────────────────────────────────────┘".cyan().bold());
+    eprintln!(
+        "{}",
+        "┌─ Custom sampling parameters ─────────────────────────────────────────────┐"
+            .cyan()
+            .bold()
+    );
+    eprintln!(
+        "{} Press {} to skip any field and keep it unchanged.                  {}",
+        "│".cyan().bold(),
+        "Enter".bold(),
+        "│".cyan().bold()
+    );
+    eprintln!(
+        "{}",
+        "└───────────────────────────────────────────────────────────────────────────┘"
+            .cyan()
+            .bold()
+    );
     eprintln!();
 
     // (key, display name, type hint, friendly description)
@@ -528,7 +565,15 @@ mod tests {
     fn pick_set_by_mode_non_thinking() {
         let sets = vec![
             make_set("Thinking Mode", Some("0.6"), None, None, None, None, None),
-            make_set("Non-Thinking Mode", Some("0.7"), None, None, None, None, None),
+            make_set(
+                "Non-Thinking Mode",
+                Some("0.7"),
+                None,
+                None,
+                None,
+                None,
+                None,
+            ),
         ];
         let map = pick_set_menu(&sets, Some("non-thinking")).unwrap();
         assert!(
@@ -540,7 +585,15 @@ mod tests {
     fn pick_set_by_mode_thinking() {
         let sets = vec![
             make_set("Thinking Mode", Some("0.6"), None, None, None, None, None),
-            make_set("Non-Thinking Mode", Some("0.7"), None, None, None, None, None),
+            make_set(
+                "Non-Thinking Mode",
+                Some("0.7"),
+                None,
+                None,
+                None,
+                None,
+                None,
+            ),
         ];
         let map = pick_set_menu(&sets, Some("thinking")).unwrap();
         assert!(
