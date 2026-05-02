@@ -60,6 +60,20 @@ jobs:
         with:
           persist-credentials: false
           submodules: recursive
+      - name: Verify tag matches Cargo.toml version
+        if: ${{ !github.event.pull_request }}
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          CARGO_VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/.*= *"\(.*\)"/\1/')
+          echo "Git tag version : $TAG"
+          echo "Cargo.toml version: $CARGO_VERSION"
+          if [ "$TAG" != "$CARGO_VERSION" ]; then
+            echo ""
+            echo "ERROR: Tag v$TAG does not match Cargo.toml version $CARGO_VERSION."
+            echo "Merge the version-bump PR first, then re-push the tag."
+            exit 1
+          fi
       - name: Install dist
         # we specify bash to get pipefail; it guards against the `curl` command
         # failing. otherwise `sh` won't catch that `curl` returned non-0
