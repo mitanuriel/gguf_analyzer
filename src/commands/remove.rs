@@ -12,7 +12,7 @@ use crate::{
     cli::RemoveArgs,
     display::format_value,
     error::AppError,
-    gguf::{write_modified_gguf, ParsedGguf},
+    gguf::{backup_if_exists, write_modified_gguf, ParsedGguf},
 };
 
 /// Run the `remove` subcommand.
@@ -43,6 +43,17 @@ pub fn run(args: &RemoveArgs) -> anyhow::Result<()> {
     // ── Guard output file ────────────────────────────────────────────────────
     if args.output.exists() && !args.force {
         return Err(AppError::OutputExists { path: args.output.clone() }.into());
+    }
+
+    // ── Optional backup of existing output ───────────────────────────────────
+    if args.backup
+        && let Some(bak) = backup_if_exists(&args.output)?
+    {
+        eprintln!(
+            "{} '{}'",
+            "Backup :".blue().bold(),
+            bak.display()
+        );
     }
 
     // ── Apply the change ─────────────────────────────────────────────────────
@@ -84,6 +95,7 @@ mod tests {
             key:     "general.name".to_string(),
             output:  PathBuf::from("/tmp/out.gguf"),
             force:   false,
+        backup:  false,
             dry_run: false,
         };
         assert!(run(&args).is_err());

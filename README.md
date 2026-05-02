@@ -178,6 +178,7 @@ gguf-analyzer set model.gguf \
 | `-t, --type <TYPE>` | `u8` `i8` `u16` `i16` `u32` `i32` `f32` `u64` `i64` `f64` `bool` `string` | ✓ |
 | `-o, --output <FILE>` | Output file path | ✓ |
 | `--force` | Allow new key or overwrite existing output | — |
+| `--backup` | Before overwriting `<output>`, rename existing file to `<output>.bak` | — |
 | `--dry-run` | Preview without writing | — |
 
 ---
@@ -200,6 +201,7 @@ gguf-analyzer remove model.gguf \
 | `--key <KEY>` | Key to delete | ✓ |
 | `-o, --output <FILE>` | Output file path | ✓ |
 | `--force` | Overwrite output if it exists | — |
+| `--backup` | Before overwriting `<output>`, rename existing file to `<output>.bak` | — |
 | `--dry-run` | Preview without writing | — |
 
 ---

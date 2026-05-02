@@ -25,6 +25,7 @@ fn remove_key_disappears_from_output() {
         key:     "llm.context_length".to_string(),
         output:  out_path.clone(),
         force:   true,
+        backup:  false,
         dry_run: false,
     };
     run(&args).expect("remove should succeed");
@@ -49,6 +50,7 @@ fn remove_decrements_metadata_count() {
         key:     "general.name".to_string(),
         output:  out_path.clone(),
         force:   true,
+        backup:  false,
         dry_run: false,
     };
     run(&args).expect("remove should succeed");
@@ -68,6 +70,7 @@ fn remove_other_keys_are_preserved() {
         key:     "llm.context_length".to_string(),
         output:  out_path.clone(),
         force:   true,
+        backup:  false,
         dry_run: false,
     };
     run(&args).expect("remove should succeed");
@@ -87,6 +90,7 @@ fn remove_missing_key_errors() {
         key:     "does.not.exist".to_string(),
         output:  out_tmp.path().to_path_buf(),
         force:   false,
+        backup:  false,
         dry_run: false,
     };
     assert!(run(&args).is_err(), "removing absent key must return Err");
@@ -103,6 +107,7 @@ fn remove_dry_run_does_not_write_file() {
         key:     "general.name".to_string(),
         output:  out_path.clone(),
         force:   true,
+        backup:  false,
         dry_run: true,
     };
     run(&args).expect("dry-run should return Ok");

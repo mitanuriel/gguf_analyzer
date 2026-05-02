@@ -116,6 +116,15 @@ pub struct SetArgs {
     #[arg(long)]
     pub force: bool,
 
+    /// Before overwriting an existing output file, rename it to `<output>.bak`.
+    ///
+    /// Useful when chaining edits onto the same target file: the previous
+    /// version is preserved as a sibling `.bak`, so you can roll back with a
+    /// simple `mv` if something goes wrong. Has no effect if the output file
+    /// does not yet exist, or in `--dry-run` mode.
+    #[arg(long)]
+    pub backup: bool,
+
     /// Show what would change without writing any bytes to disk.
     #[arg(long)]
     pub dry_run: bool,
@@ -139,6 +148,10 @@ pub struct RemoveArgs {
     /// Overwrite the output file if it already exists.
     #[arg(long)]
     pub force: bool,
+
+    /// Before overwriting an existing output file, rename it to `<output>.bak`.
+    #[arg(long)]
+    pub backup: bool,
 
     /// Show what would change without writing any bytes to disk.
     #[arg(long)]

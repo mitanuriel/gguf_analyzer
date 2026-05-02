@@ -90,6 +90,7 @@ fn set_existing_key_roundtrip() {
         r#type:  ValueType::String,
         output:  out_path.clone(),
         force:   true,
+        backup:  false,
         dry_run: false,
     };
     run(&args).expect("set should succeed");
@@ -115,6 +116,7 @@ fn set_u32_key_roundtrip() {
         r#type:  ValueType::U32,
         output:  out_path.clone(),
         force:   true,
+        backup:  false,
         dry_run: false,
     };
     run(&args).expect("set should succeed");
@@ -136,6 +138,7 @@ fn set_missing_key_without_force_errors() {
         r#type:  ValueType::String,
         output:  out_tmp.path().to_path_buf(),
         force:   false,
+        backup:  false,
         dry_run: false,
     };
     assert!(run(&args).is_err(), "should fail: key does not exist");
@@ -154,6 +157,7 @@ fn set_missing_key_with_force_creates_key() {
         r#type:  ValueType::String,
         output:  out_path.clone(),
         force:   true,
+        backup:  false,
         dry_run: false,
     };
     run(&args).expect("force-create should succeed");
@@ -181,8 +185,101 @@ fn set_dry_run_does_not_write_file() {
         r#type:  ValueType::String,
         output:  output.clone(),
         force:   true,
+        backup:  false,
         dry_run: true,
     };
     run(&args).expect("dry-run should return Ok");
     assert!(!output.exists(), "dry-run must not create the output file");
+}
+
+#[test]
+fn set_backup_renames_existing_output() {
+    let (_src, src_path) = common::minimal_gguf();
+
+    // First write — creates the output file.
+    let out_tmp = output_tmp();
+    let out_path = out_tmp.path().to_path_buf();
+    let bak_path = {
+        let mut p = out_path.clone().into_os_string();
+        p.push(".bak");
+        PathBuf::from(p)
+    };
+    let _ = std::fs::remove_file(&bak_path);
+
+    let first = SetArgs {
+        file:    src_path.clone(),
+        key:     "general.name".to_string(),
+        value:   "v1".to_string(),
+        r#type:  ValueType::String,
+        output:  out_path.clone(),
+        force:   true,
+        backup:  false,
+        dry_run: false,
+    };
+    run(&first).expect("first set");
+    assert!(out_path.exists());
+    assert!(!bak_path.exists(), "no backup expected on first write");
+
+    // Second write with --backup — previous output should move to .bak.
+    let second = SetArgs {
+        file:    src_path.clone(),
+        key:     "general.name".to_string(),
+        value:   "v2".to_string(),
+        r#type:  ValueType::String,
+        output:  out_path.clone(),
+        force:   true,
+        backup:  true,
+        dry_run: false,
+    };
+    run(&second).expect("second set with backup");
+
+    assert!(out_path.exists(), "new output must exist");
+    assert!(bak_path.exists(), "previous output must be preserved as .bak");
+
+    // .bak should still parse as a valid GGUF and contain v1.
+    let bak_gguf = ParsedGguf::open(&bak_path).expect("open .bak");
+    assert_eq!(
+        bak_gguf.metadata.get("general.name").unwrap(),
+        &MetadataValue::String("v1".to_string()),
+    );
+
+    // New output should contain v2.
+    let new_gguf = ParsedGguf::open(&out_path).expect("open new output");
+    assert_eq!(
+        new_gguf.metadata.get("general.name").unwrap(),
+        &MetadataValue::String("v2".to_string()),
+    );
+
+    // Cleanup
+    let _ = std::fs::remove_file(&bak_path);
+}
+
+#[test]
+fn set_backup_is_noop_when_output_missing() {
+    let (_src, src_path) = common::minimal_gguf();
+    let out_tmp = output_tmp();
+    let out_path = out_tmp.path().to_path_buf();
+    // Ensure the output does not exist (NamedTempFile creates an empty file
+    // — explicitly remove it so we exercise the "no prior output" branch).
+    let _ = std::fs::remove_file(&out_path);
+    let bak_path = {
+        let mut p = out_path.clone().into_os_string();
+        p.push(".bak");
+        PathBuf::from(p)
+    };
+    let _ = std::fs::remove_file(&bak_path);
+
+    let args = SetArgs {
+        file:    src_path.clone(),
+        key:     "general.name".to_string(),
+        value:   "fresh".to_string(),
+        r#type:  ValueType::String,
+        output:  out_path.clone(),
+        force:   true,
+        backup:  true,
+        dry_run: false,
+    };
+    run(&args).expect("set should succeed");
+    assert!(out_path.exists());
+    assert!(!bak_path.exists(), "no .bak should be created when output didn't exist");
 }

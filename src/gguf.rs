@@ -163,6 +163,26 @@ pub fn align_offset(offset: u64, alignment: u64) -> u64 {
     }
 }
 
+// ── Backup helper ─────────────────────────────────────────────────────────────
+
+/// If `path` exists, rename it to `<path>.bak` and return the backup path.
+///
+/// Any pre-existing `<path>.bak` is overwritten by `fs::rename`. Returns
+/// `Ok(None)` if `path` did not exist (nothing to back up).
+///
+/// This is intentionally a *rename* (atomic on the same filesystem) rather
+/// than a copy, so it's cheap even for large GGUF files.
+pub fn backup_if_exists(path: &Path) -> anyhow::Result<Option<std::path::PathBuf>> {
+    if !path.exists() {
+        return Ok(None);
+    }
+    let mut bak = path.as_os_str().to_owned();
+    bak.push(".bak");
+    let bak_path = std::path::PathBuf::from(bak);
+    fs::rename(path, &bak_path).map_err(|e| AppError::io(path, e))?;
+    Ok(Some(bak_path))
+}
+
 // ── Write helper ──────────────────────────────────────────────────────────────
 
 /// Write a new GGUF file to `dest` with a modified `metadata`.
@@ -333,5 +353,37 @@ mod tests {
         let aligned = align_offset(header_end, alignment);
         let padding = aligned - header_end;
         assert_eq!(padding, 28);
+    }
+
+    // ── backup_if_exists ─────────────────────────────────────────────────────
+
+    #[test]
+    fn backup_returns_none_for_missing_path() {
+        let p = std::path::PathBuf::from("/no/such/file/for/backup_test.gguf");
+        let result = backup_if_exists(&p).expect("ok");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn backup_renames_existing_file() {
+        let dir = std::env::temp_dir().join(format!(
+            "gguf_backup_test_{}",
+            std::process::id()
+        ));
+        let _ = fs::create_dir_all(&dir);
+        let target = dir.join("data.gguf");
+        let bak    = dir.join("data.gguf.bak");
+        let _ = fs::remove_file(&target);
+        let _ = fs::remove_file(&bak);
+
+        fs::write(&target, b"original-bytes").unwrap();
+        let returned = backup_if_exists(&target).expect("backup ok");
+
+        assert_eq!(returned.as_deref(), Some(bak.as_path()));
+        assert!(bak.exists(), ".bak should now exist");
+        assert!(!target.exists(), "original path should have been moved");
+        assert_eq!(fs::read(&bak).unwrap(), b"original-bytes");
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }
