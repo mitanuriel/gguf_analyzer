@@ -1,8 +1,4 @@
-mod cli;
-mod commands;
-pub mod display;
-mod error;
-pub mod gguf;
+use gguf_analyzer::{cli, commands};
 
 use clap::CommandFactory;
 use clap_complete::generate;

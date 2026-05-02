@@ -10,6 +10,10 @@ license = "MIT"
 name = "gguf-analyzer"
 path = "src/main.rs"
 
+[lib]
+name = "gguf_analyzer"
+path = "src/lib.rs"
+
 [dependencies]
 # GGUF reading / writing
 gguf-rs-lib = { version = "0.2", features = ["mmap"] }
@@ -44,6 +48,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 # ANSI colour output
 colored = "2"
+
+[dev-dependencies]
+# Temporary files for integration tests
+tempfile = "3"
 
 # The profile that 'dist' will build with
 [profile.dist]
