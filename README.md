@@ -27,7 +27,8 @@ Writes are always to a **new output file** — the source is never touched.
 
 ### `tensors` — tensor inventory
 
-![tensors command with name, shape, quantisation type, offset, and size columns](docs/screenshots/tensors.png)
+<img width="580" height="282" alt="Screenshot 2026-05-02 at 06 28 46" src="https://github.com/user-attachments/assets/d8f695ff-941f-4cac-9935-a636099a905d" />
+
 
 ---
 
