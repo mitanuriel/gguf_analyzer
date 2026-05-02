@@ -6,7 +6,7 @@ use std::{
 };
 
 use anyhow::Context as _;
-use serde_json::{json, Map, Value as JsonValue};
+use serde_json::{Map, Value as JsonValue, json};
 use tracing::{debug, instrument};
 
 use crate::{
@@ -28,9 +28,9 @@ pub fn run(args: &ExportArgs) -> anyhow::Result<()> {
     debug!(entries = entries.len(), "exporting metadata");
 
     let output = match args.format {
-        ExportFormat::Json     => export_json(&entries, args.array_limit)?,
+        ExportFormat::Json => export_json(&entries, args.array_limit)?,
         ExportFormat::Markdown => export_markdown(&entries, args.array_limit),
-        ExportFormat::Csv      => export_csv(&entries, args.array_limit),
+        ExportFormat::Csv => export_csv(&entries, args.array_limit),
     };
 
     match &args.output {

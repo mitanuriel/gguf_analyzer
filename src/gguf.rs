@@ -243,7 +243,10 @@ pub fn write_modified_gguf(
     let header_end = header_buf.len() as u64;
     let aligned_end = align_offset(header_end, alignment);
     let padding_bytes = (aligned_end - header_end) as usize;
-    debug!(header_end, aligned_end, padding_bytes, "alignment calculated");
+    debug!(
+        header_end,
+        aligned_end, padding_bytes, "alignment calculated"
+    );
 
     // ── 4. Open source for tensor streaming ───────────────────────────────
     let mut src_file = fs::File::open(src_path)
@@ -366,13 +369,10 @@ mod tests {
 
     #[test]
     fn backup_renames_existing_file() {
-        let dir = std::env::temp_dir().join(format!(
-            "gguf_backup_test_{}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("gguf_backup_test_{}", std::process::id()));
         let _ = fs::create_dir_all(&dir);
         let target = dir.join("data.gguf");
-        let bak    = dir.join("data.gguf.bak");
+        let bak = dir.join("data.gguf.bak");
         let _ = fs::remove_file(&target);
         let _ = fs::remove_file(&bak);
 

@@ -1,10 +1,7 @@
 //! Integration tests for the `info` subcommand.
 
 mod common;
-use gguf_analyzer::{
-    display::format_bytes,
-    gguf::ParsedGguf,
-};
+use gguf_analyzer::{display::format_bytes, gguf::ParsedGguf};
 
 /// ParsedGguf::open succeeds on the fixture and returns expected field values.
 #[test]
@@ -15,7 +12,10 @@ fn info_opens_fixture() {
     assert_eq!(gguf.version, 3, "GGUF version should be 3");
     assert_eq!(gguf.tensor_count, 1, "fixture has exactly 1 tensor");
     assert_eq!(gguf.metadata.len(), 3, "fixture has 3 metadata entries");
-    assert_eq!(gguf.alignment, 32, "should fall back to default alignment 32");
+    assert_eq!(
+        gguf.alignment, 32,
+        "should fall back to default alignment 32"
+    );
     assert!(gguf.file_size > 0, "file size must be non-zero");
 }
 
@@ -30,10 +30,10 @@ fn info_tensor_data_offset_is_nonzero() {
 /// format_bytes is used in the info table; verify it at common sizes.
 #[test]
 fn info_format_bytes_boundaries() {
-    assert_eq!(format_bytes(0),             "0 B");
-    assert_eq!(format_bytes(1023),          "1023 B");
-    assert_eq!(format_bytes(1024),          "1.00 KiB");
-    assert_eq!(format_bytes(1_048_576),     "1.00 MiB");
+    assert_eq!(format_bytes(0), "0 B");
+    assert_eq!(format_bytes(1023), "1023 B");
+    assert_eq!(format_bytes(1024), "1.00 KiB");
+    assert_eq!(format_bytes(1_048_576), "1.00 MiB");
     assert_eq!(format_bytes(1_073_741_824), "1.00 GiB");
 }
 

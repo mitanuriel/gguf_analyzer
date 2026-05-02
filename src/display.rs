@@ -8,14 +8,14 @@ use gguf_rs_lib::{
     tensor::info::TensorInfo,
 };
 use tabled::{
+    Table,
     builder::Builder,
     settings::{
-        object::{Columns, Rows},
         Color, Modify, Style, Width,
+        object::{Columns, Rows},
     },
-    Table,
 };
-use terminal_size::{terminal_size, Width as TWidth};
+use terminal_size::{Width as TWidth, terminal_size};
 
 // ── Terminal width ────────────────────────────────────────────────────────────
 
@@ -65,38 +65,39 @@ pub fn format_bytes(bytes: u64) -> String {
 /// longer a `[… N more]` suffix is appended.
 pub fn format_value(val: &MetadataValue, array_limit: usize) -> String {
     match val {
-        MetadataValue::U8(v)     => v.to_string(),
-        MetadataValue::I8(v)     => v.to_string(),
-        MetadataValue::U16(v)    => v.to_string(),
-        MetadataValue::I16(v)    => v.to_string(),
-        MetadataValue::U32(v)    => v.to_string(),
-        MetadataValue::I32(v)    => v.to_string(),
-        MetadataValue::F32(v)    => format!("{}", v),
-        MetadataValue::U64(v)    => v.to_string(),
-        MetadataValue::I64(v)    => v.to_string(),
-        MetadataValue::F64(v)    => format!("{}", v),
-        MetadataValue::Bool(v)   => v.to_string(),
+        MetadataValue::U8(v) => v.to_string(),
+        MetadataValue::I8(v) => v.to_string(),
+        MetadataValue::U16(v) => v.to_string(),
+        MetadataValue::I16(v) => v.to_string(),
+        MetadataValue::U32(v) => v.to_string(),
+        MetadataValue::I32(v) => v.to_string(),
+        MetadataValue::F32(v) => format!("{}", v),
+        MetadataValue::U64(v) => v.to_string(),
+        MetadataValue::I64(v) => v.to_string(),
+        MetadataValue::F64(v) => format!("{}", v),
+        MetadataValue::Bool(v) => v.to_string(),
         MetadataValue::String(v) => v.clone(),
-        MetadataValue::Array(arr)  => format_array(arr, array_limit),
+        MetadataValue::Array(arr) => format_array(arr, array_limit),
     }
 }
 
 /// Format a [`MetadataValue`] type tag as a short string (e.g. `"u32"`, `"string"`).
 pub fn format_type(val: &MetadataValue) -> &'static str {
     match val {
-        MetadataValue::U8(_)     => "u8",
-        MetadataValue::I8(_)     => "i8",
-        MetadataValue::U16(_)    => "u16",
-        MetadataValue::I16(_)    => "i16",
-        MetadataValue::U32(_)    => "u32",
-        MetadataValue::I32(_)    => "i32",
-        MetadataValue::F32(_)    => "f32",
-        MetadataValue::U64(_)    => "u64",
-        MetadataValue::I64(_)    => "i64",
-        MetadataValue::F64(_)    => "f64",
-        MetadataValue::Bool(_)   => "bool",
+        MetadataValue::U8(_) => "u8",
+        MetadataValue::I8(_) => "i8",
+        MetadataValue::U16(_) => "u16",
+        MetadataValue::I16(_) => "i16",
+        MetadataValue::U32(_) => "u32",
+        MetadataValue::I32(_) => "i32",
+        MetadataValue::F32(_) => "f32",
+        MetadataValue::U64(_) => "u64",
+        MetadataValue::I64(_) => "i64",
+        MetadataValue::F64(_) => "f64",
+        MetadataValue::Bool(_) => "bool",
         MetadataValue::String(_) => "string",
-        MetadataValue::Array(_)  => "array",    }
+        MetadataValue::Array(_) => "array",
+    }
 }
 
 fn format_array(arr: &MetadataArray, limit: usize) -> String {
@@ -160,8 +161,13 @@ pub fn meta_table(rows: &[(&str, &str, &str)], width: usize) -> Table {
     }
     let mut table = builder.build();
     table.with(Style::rounded());
-    let key_w   = rows.iter().map(|(k,_,_)| k.len()).max().unwrap_or(3).max(3);
-    let type_w  = 8_usize;
+    let key_w = rows
+        .iter()
+        .map(|(k, _, _)| k.len())
+        .max()
+        .unwrap_or(3)
+        .max(3);
+    let type_w = 8_usize;
     let borders = 4 * 3 + 2;
     let value_w = width.saturating_sub(key_w + type_w + borders).max(20);
     table.with(Modify::new(Columns::new(..1)).with(Width::increase(key_w)));
@@ -260,11 +266,7 @@ mod tests {
         assert_eq!(format_type(&MetadataValue::String(String::new())), "string");
         assert_eq!(
             format_type(&MetadataValue::Array(Box::new(
-                MetadataArray::new(
-                    gguf_rs_lib::format::types::GGUFValueType::U32,
-                    vec![]
-                )
-                .unwrap()
+                MetadataArray::new(gguf_rs_lib::format::types::GGUFValueType::U32, vec![]).unwrap()
             ))),
             "array"
         );

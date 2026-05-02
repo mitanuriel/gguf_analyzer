@@ -69,13 +69,19 @@ pub enum AppError {
 impl AppError {
     /// Convenience constructor: wrap a [`std::io::Error`] with file context.
     pub fn io(path: impl Into<PathBuf>, source: std::io::Error) -> Self {
-        AppError::Io { path: path.into(), source }
+        AppError::Io {
+            path: path.into(),
+            source,
+        }
     }
 
     /// Convenience constructor: wrap a [`gguf_rs_lib::GGUFError`] with file
     /// context.
     pub fn gguf_lib(path: impl Into<PathBuf>, source: gguf_rs_lib::GGUFError) -> Self {
-        AppError::GgufLib { path: path.into(), source }
+        AppError::GgufLib {
+            path: path.into(),
+            source,
+        }
     }
 }
 
@@ -112,7 +118,9 @@ mod tests {
 
     #[test]
     fn output_exists_message_contains_path() {
-        let err = AppError::OutputExists { path: PathBuf::from("/tmp/out.gguf") };
+        let err = AppError::OutputExists {
+            path: PathBuf::from("/tmp/out.gguf"),
+        };
         let msg = err.to_string();
         assert!(msg.contains("/tmp/out.gguf"), "message: {msg}");
         assert!(msg.contains("--force"), "should mention --force: {msg}");
@@ -129,7 +137,9 @@ mod tests {
 
     #[test]
     fn unknown_export_format_lists_supported() {
-        let err = AppError::UnknownExportFormat { format: "yaml".to_string() };
+        let err = AppError::UnknownExportFormat {
+            format: "yaml".to_string(),
+        };
         let msg = err.to_string();
         assert!(msg.contains("yaml"), "message: {msg}");
         assert!(msg.contains("json"), "should list supported formats: {msg}");

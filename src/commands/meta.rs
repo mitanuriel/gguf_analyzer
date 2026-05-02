@@ -60,14 +60,18 @@ pub fn run(args: &MetaArgs) -> anyhow::Result<()> {
 
     let rows: Vec<(&str, &str, String)> = entries
         .iter()
-        .map(|(k, v)| (k.as_str(), format_type(v), format_value(v, args.array_limit)))
+        .map(|(k, v)| {
+            (
+                k.as_str(),
+                format_type(v),
+                format_value(v, args.array_limit),
+            )
+        })
         .collect();
 
     // tabled needs slices of (&str, &str, &str)
-    let row_refs: Vec<(&str, &str, &str)> = rows
-        .iter()
-        .map(|(k, t, v)| (*k, *t, v.as_str()))
-        .collect();
+    let row_refs: Vec<(&str, &str, &str)> =
+        rows.iter().map(|(k, t, v)| (*k, *t, v.as_str())).collect();
 
     let width = term_width();
     let table = meta_table(&row_refs, width);

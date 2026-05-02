@@ -15,7 +15,7 @@ use crate::{
     cli::{SetArgs, ValueType},
     display::format_value,
     error::AppError,
-    gguf::{backup_if_exists, write_modified_gguf, ParsedGguf},
+    gguf::{ParsedGguf, backup_if_exists, write_modified_gguf},
 };
 
 /// Run the `set` subcommand.
@@ -35,14 +35,13 @@ pub fn run(args: &SetArgs) -> anyhow::Result<()> {
     }
 
     // ── Parse the new value ──────────────────────────────────────────────────
-    let new_value = parse_value(&args.value, &args.r#type)
-        .with_context(|| {
-            format!(
-                "cannot parse {:?} as type {}",
-                args.value,
-                args.r#type.type_name()
-            )
-        })?;
+    let new_value = parse_value(&args.value, &args.r#type).with_context(|| {
+        format!(
+            "cannot parse {:?} as type {}",
+            args.value,
+            args.r#type.type_name()
+        )
+    })?;
 
     // ── Dry-run output ───────────────────────────────────────────────────────
     if args.dry_run {
@@ -61,18 +60,17 @@ pub fn run(args: &SetArgs) -> anyhow::Result<()> {
 
     // ── Guard output file ────────────────────────────────────────────────────
     if args.output.exists() && !args.force {
-        return Err(AppError::OutputExists { path: args.output.clone() }.into());
+        return Err(AppError::OutputExists {
+            path: args.output.clone(),
+        }
+        .into());
     }
 
     // ── Optional backup of existing output ───────────────────────────────────
     if args.backup
         && let Some(bak) = backup_if_exists(&args.output)?
     {
-        eprintln!(
-            "{} '{}'",
-            "Backup :".blue().bold(),
-            bak.display()
-        );
+        eprintln!("{} '{}'", "Backup :".blue().bold(), bak.display());
     }
 
     // ── Apply the change ─────────────────────────────────────────────────────
@@ -105,23 +103,21 @@ pub fn run(args: &SetArgs) -> anyhow::Result<()> {
 
 pub fn parse_value(raw: &str, vtype: &ValueType) -> anyhow::Result<MetadataValue> {
     Ok(match vtype {
-        ValueType::U8     => MetadataValue::U8(raw.parse::<u8>().context("expected u8")?),
-        ValueType::I8     => MetadataValue::I8(raw.parse::<i8>().context("expected i8")?),
-        ValueType::U16    => MetadataValue::U16(raw.parse::<u16>().context("expected u16")?),
-        ValueType::I16    => MetadataValue::I16(raw.parse::<i16>().context("expected i16")?),
-        ValueType::U32    => MetadataValue::U32(raw.parse::<u32>().context("expected u32")?),
-        ValueType::I32    => MetadataValue::I32(raw.parse::<i32>().context("expected i32")?),
-        ValueType::F32    => MetadataValue::F32(raw.parse::<f32>().context("expected f32")?),
-        ValueType::U64    => MetadataValue::U64(raw.parse::<u64>().context("expected u64")?),
-        ValueType::I64    => MetadataValue::I64(raw.parse::<i64>().context("expected i64")?),
-        ValueType::F64    => MetadataValue::F64(raw.parse::<f64>().context("expected f64")?),
-        ValueType::Bool   => MetadataValue::Bool(
-            match raw.to_lowercase().as_str() {
-                "true"  | "1" | "yes" => true,
-                "false" | "0" | "no"  => false,
-                other => anyhow::bail!("expected bool, got {:?}", other),
-            },
-        ),
+        ValueType::U8 => MetadataValue::U8(raw.parse::<u8>().context("expected u8")?),
+        ValueType::I8 => MetadataValue::I8(raw.parse::<i8>().context("expected i8")?),
+        ValueType::U16 => MetadataValue::U16(raw.parse::<u16>().context("expected u16")?),
+        ValueType::I16 => MetadataValue::I16(raw.parse::<i16>().context("expected i16")?),
+        ValueType::U32 => MetadataValue::U32(raw.parse::<u32>().context("expected u32")?),
+        ValueType::I32 => MetadataValue::I32(raw.parse::<i32>().context("expected i32")?),
+        ValueType::F32 => MetadataValue::F32(raw.parse::<f32>().context("expected f32")?),
+        ValueType::U64 => MetadataValue::U64(raw.parse::<u64>().context("expected u64")?),
+        ValueType::I64 => MetadataValue::I64(raw.parse::<i64>().context("expected i64")?),
+        ValueType::F64 => MetadataValue::F64(raw.parse::<f64>().context("expected f64")?),
+        ValueType::Bool => MetadataValue::Bool(match raw.to_lowercase().as_str() {
+            "true" | "1" | "yes" => true,
+            "false" | "0" | "no" => false,
+            other => anyhow::bail!("expected bool, got {:?}", other),
+        }),
         ValueType::String => MetadataValue::String(raw.to_string()),
     })
 }
@@ -132,7 +128,10 @@ mod tests {
 
     #[test]
     fn parse_u32() {
-        assert_eq!(parse_value("42", &ValueType::U32).unwrap(), MetadataValue::U32(42));
+        assert_eq!(
+            parse_value("42", &ValueType::U32).unwrap(),
+            MetadataValue::U32(42)
+        );
     }
 
     #[test]
@@ -146,10 +145,16 @@ mod tests {
     #[test]
     fn parse_bool_variants() {
         for s in &["true", "1", "yes"] {
-            assert_eq!(parse_value(s, &ValueType::Bool).unwrap(), MetadataValue::Bool(true));
+            assert_eq!(
+                parse_value(s, &ValueType::Bool).unwrap(),
+                MetadataValue::Bool(true)
+            );
         }
         for s in &["false", "0", "no"] {
-            assert_eq!(parse_value(s, &ValueType::Bool).unwrap(), MetadataValue::Bool(false));
+            assert_eq!(
+                parse_value(s, &ValueType::Bool).unwrap(),
+                MetadataValue::Bool(false)
+            );
         }
     }
 
@@ -163,13 +168,13 @@ mod tests {
         use crate::cli::SetArgs;
         use std::path::PathBuf;
         let args = SetArgs {
-            file:    PathBuf::from("/no/such/file.gguf"),
-            key:     "general.name".to_string(),
-            value:   "test".to_string(),
-            r#type:  ValueType::String,
-            output:  PathBuf::from("/tmp/out.gguf"),
-            force:   false,
-        backup:  false,
+            file: PathBuf::from("/no/such/file.gguf"),
+            key: "general.name".to_string(),
+            value: "test".to_string(),
+            r#type: ValueType::String,
+            output: PathBuf::from("/tmp/out.gguf"),
+            force: false,
+            backup: false,
             dry_run: false,
         };
         assert!(run(&args).is_err());

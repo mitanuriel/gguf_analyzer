@@ -4,7 +4,7 @@ use clap::CommandFactory;
 use clap_complete::generate;
 use colored::Colorize as _;
 use std::io;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 
 use cli::{Cli, Command};
 
@@ -30,12 +30,12 @@ fn run() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Command::Info(args)        => commands::info::run(args),
-        Command::Meta(args)        => commands::meta::run(args),
-        Command::Tensors(args)     => commands::tensors::run(args),
-        Command::Set(args)         => commands::set::run(args),
-        Command::Remove(args)      => commands::remove::run(args),
-        Command::Export(args)      => commands::export::run(args),
+        Command::Info(args) => commands::info::run(args),
+        Command::Meta(args) => commands::meta::run(args),
+        Command::Tensors(args) => commands::tensors::run(args),
+        Command::Set(args) => commands::set::run(args),
+        Command::Remove(args) => commands::remove::run(args),
+        Command::Export(args) => commands::export::run(args),
         Command::Completions(args) => {
             let mut cmd = Cli::command();
             generate(args.shell, &mut cmd, "gguf-analyzer", &mut io::stdout());
