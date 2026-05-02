@@ -36,6 +36,8 @@ fn run() -> anyhow::Result<()> {
         Command::Set(args) => commands::set::run(args),
         Command::Remove(args) => commands::remove::run(args),
         Command::Export(args) => commands::export::run(args),
+        Command::Fetch(args) => commands::fetch::run(args),
+        Command::ModelCard(args) => commands::model_card::run(args),
         Command::Completions(args) => {
             let mut cmd = Cli::command();
             generate(args.shell, &mut cmd, "gguf-analyzer", &mut io::stdout());
