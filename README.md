@@ -19,11 +19,12 @@ Writes are always to a **new output file** — the source is never touched.
 
 ### `info` — file overview
 
-![info command output showing file size, GGUF version, tensor count and metadata count](docs/screenshots/info.png)
+<img width="650" height="154" alt="Screenshot 2026-05-02 at 06 42 26" src="https://github.com/user-attachments/assets/66fad96c-6249-457e-93d3-017a94e0a1f2" />
+
 
 ### `meta` — metadata table
+<img width="661" height="421" alt="Screenshot 2026-05-02 at 06 42 48" src="https://github.com/user-attachments/assets/278604a2-1776-44d9-a006-374c60b1f046" />
 
-![meta command showing key, type, and value columns with colour-coded rows](docs/screenshots/meta.png)
 
 ### `tensors` — tensor inventory
 
