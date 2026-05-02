@@ -53,6 +53,11 @@ pub fn run(args: &RemoveArgs) -> anyhow::Result<()> {
         && let Some(bak) = backup_if_exists(&args.output)?
     {
         eprintln!("{} '{}'", "Backup :".blue().bold(), bak.display());
+        // In-place edit: source path == output path. We just renamed it to
+        // `.bak`, so make the writer read tensor bytes from there.
+        if gguf.path == args.output {
+            gguf.path = bak;
+        }
     }
 
     // ── Apply the change ─────────────────────────────────────────────────────

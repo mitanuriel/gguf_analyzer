@@ -347,3 +347,48 @@ fn set_backup_is_noop_when_output_missing() {
         "no .bak should be created when output didn't exist"
     );
 }
+
+/// Regression: when --output points at the source file (in-place edit) and
+/// --backup is set, the source gets renamed to `.bak` before the writer reads
+/// tensor bytes. Earlier versions then failed with `No such file or directory`
+/// because the writer still pointed at the original source path. Fixed by
+/// redirecting the reader to the new `.bak` location.
+#[test]
+fn set_inplace_with_backup_succeeds() {
+    let (src, src_path) = common::minimal_gguf();
+
+    // Use the source file as the output (in-place edit). We hold onto the
+    // NamedTempFile to keep the directory entry alive for the path itself,
+    // even though we're about to overwrite it.
+    let bak_path = {
+        let mut p = src_path.clone().into_os_string();
+        p.push(".bak");
+        PathBuf::from(p)
+    };
+    let _ = std::fs::remove_file(&bak_path);
+
+    let args = SetArgs {
+        file: src_path.clone(),
+        key: "general.name".to_string(),
+        value: "renamed-in-place".to_string(),
+        r#type: ValueType::String,
+        output: src_path.clone(),
+        force: true,
+        backup: true,
+        dry_run: false,
+    };
+    run(&args).expect("in-place set with --backup must succeed");
+
+    assert!(src_path.exists(), "new file at original path");
+    assert!(bak_path.exists(), "previous version preserved as .bak");
+
+    let new_gguf = ParsedGguf::open(&src_path).expect("open new output");
+    assert_eq!(
+        new_gguf.metadata.get("general.name").unwrap(),
+        &MetadataValue::String("renamed-in-place".to_string()),
+    );
+
+    // Cleanup
+    drop(src);
+    let _ = std::fs::remove_file(&bak_path);
+}
