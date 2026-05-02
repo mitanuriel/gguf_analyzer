@@ -16,11 +16,14 @@ use crate::{
     display::format_value,
     error::AppError,
     gguf::{ParsedGguf, backup_if_exists, write_modified_gguf},
+    output::resolve_output,
 };
 
 /// Run the `set` subcommand.
 #[instrument(skip_all, fields(file = %args.file.display(), key = %args.key))]
 pub fn run(args: &SetArgs) -> anyhow::Result<()> {
+    let output = resolve_output(&args.file, args.output.as_deref(), "-modified");
+
     let mut gguf = ParsedGguf::open(&args.file)
         .with_context(|| format!("failed to open '{}'", args.file.display()))?;
 
@@ -53,28 +56,25 @@ pub fn run(args: &SetArgs) -> anyhow::Result<()> {
             println!("{} {}", "Would create  :".green().bold(), args.key.bold());
         }
         println!("  New value   : {}", format_value(&new_value, 8).cyan());
-        println!("  Output file : {}", args.output.display());
+        println!("  Output file : {}", output.display());
         println!("{}", "(dry-run — no files written)".dimmed());
         return Ok(());
     }
 
     // ── Guard output file ────────────────────────────────────────────────────
-    if args.output.exists() && !args.force {
+    if output.exists() && !args.force {
         return Err(AppError::OutputExists {
-            path: args.output.clone(),
+            path: output.clone(),
         }
         .into());
     }
 
     // ── Optional backup of existing output ───────────────────────────────────
     if args.backup
-        && let Some(bak) = backup_if_exists(&args.output)?
+        && let Some(bak) = backup_if_exists(&output)?
     {
         eprintln!("{} '{}'", "Backup :".blue().bold(), bak.display());
-        // If we're overwriting our own source (in-place edit), the source path
-        // we just renamed away is also where the writer will read tensor bytes
-        // from. Redirect the reader to the new `.bak` location.
-        if gguf.path == args.output {
+        if gguf.path == output {
             gguf.path = bak;
         }
     }
@@ -89,19 +89,19 @@ pub fn run(args: &SetArgs) -> anyhow::Result<()> {
         &gguf.metadata,
         &gguf.tensor_infos,
         gguf.alignment,
-        &args.output,
+        &output,
     )
-    .with_context(|| format!("write output '{}'", args.output.display()))?;
+    .with_context(|| format!("write output '{}'", output.display()))?;
 
     eprintln!(
         "{} '{}' ({} bytes)",
         "Written:".green().bold(),
-        args.output.display(),
-        fs::metadata(&args.output)
+        output.display(),
+        fs::metadata(&output)
             .map(|m| m.len().to_string())
             .unwrap_or_else(|_| "?".to_string())
     );
-    info!(key = %args.key, output = %args.output.display(), "set complete");
+    info!(key = %args.key, output = %output.display(), "set complete");
     Ok(())
 }
 
@@ -178,7 +178,7 @@ mod tests {
             key: "general.name".to_string(),
             value: "test".to_string(),
             r#type: ValueType::String,
-            output: PathBuf::from("/tmp/out.gguf"),
+            output: Some(PathBuf::from("/tmp/out.gguf")),
             force: false,
             backup: false,
             dry_run: false,

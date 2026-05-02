@@ -20,7 +20,7 @@ fn remove_key_disappears_from_output() {
     let args = RemoveArgs {
         file: src_path.clone(),
         key: "llm.context_length".to_string(),
-        output: out_path.clone(),
+        output: Some(out_path.clone()),
         force: true,
         backup: false,
         dry_run: false,
@@ -45,7 +45,7 @@ fn remove_decrements_metadata_count() {
     let args = RemoveArgs {
         file: src_path.clone(),
         key: "general.name".to_string(),
-        output: out_path.clone(),
+        output: Some(out_path.clone()),
         force: true,
         backup: false,
         dry_run: false,
@@ -65,7 +65,7 @@ fn remove_other_keys_are_preserved() {
     let args = RemoveArgs {
         file: src_path.clone(),
         key: "llm.context_length".to_string(),
-        output: out_path.clone(),
+        output: Some(out_path.clone()),
         force: true,
         backup: false,
         dry_run: false,
@@ -85,7 +85,7 @@ fn remove_missing_key_errors() {
     let args = RemoveArgs {
         file: src_path.clone(),
         key: "does.not.exist".to_string(),
-        output: out_tmp.path().to_path_buf(),
+        output: Some(out_tmp.path().to_path_buf()),
         force: false,
         backup: false,
         dry_run: false,
@@ -102,7 +102,7 @@ fn remove_dry_run_does_not_write_file() {
     let args = RemoveArgs {
         file: src_path.clone(),
         key: "general.name".to_string(),
-        output: out_path.clone(),
+        output: Some(out_path.clone()),
         force: true,
         backup: false,
         dry_run: true,
@@ -129,7 +129,7 @@ fn remove_inplace_with_backup_succeeds() {
     let args = RemoveArgs {
         file: src_path.clone(),
         key: "general.name".to_string(),
-        output: src_path.clone(),
+        output: Some(src_path.clone()),
         force: true,
         backup: true,
         dry_run: false,

@@ -401,8 +401,6 @@ dependencies = [
 [[package]]
 name = "gguf-rs-lib"
 version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f33860905c993762dfe4b3fdc17a2ae488bb2966422b543b33cf97cb06d5e15a"
 dependencies = [
  "hashbrown 0.14.5",
  "libm",

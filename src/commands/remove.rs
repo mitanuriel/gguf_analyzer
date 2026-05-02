@@ -13,11 +13,14 @@ use crate::{
     display::format_value,
     error::AppError,
     gguf::{ParsedGguf, backup_if_exists, write_modified_gguf},
+    output::resolve_output,
 };
 
 /// Run the `remove` subcommand.
 #[instrument(skip_all, fields(file = %args.file.display(), key = %args.key))]
 pub fn run(args: &RemoveArgs) -> anyhow::Result<()> {
+    let output = resolve_output(&args.file, args.output.as_deref(), "-modified");
+
     let mut gguf = ParsedGguf::open(&args.file)
         .with_context(|| format!("failed to open '{}'", args.file.display()))?;
 
@@ -35,27 +38,25 @@ pub fn run(args: &RemoveArgs) -> anyhow::Result<()> {
         let old = gguf.metadata.get(&args.key).unwrap();
         println!("{} {}", "Would remove  :".yellow().bold(), args.key.bold());
         println!("  Value       : {}", format_value(old, 8).dimmed());
-        println!("  Output file : {}", args.output.display());
+        println!("  Output file : {}", output.display());
         println!("{}", "(dry-run — no files written)".dimmed());
         return Ok(());
     }
 
     // ── Guard output file ────────────────────────────────────────────────────
-    if args.output.exists() && !args.force {
+    if output.exists() && !args.force {
         return Err(AppError::OutputExists {
-            path: args.output.clone(),
+            path: output.clone(),
         }
         .into());
     }
 
     // ── Optional backup of existing output ───────────────────────────────────
     if args.backup
-        && let Some(bak) = backup_if_exists(&args.output)?
+        && let Some(bak) = backup_if_exists(&output)?
     {
         eprintln!("{} '{}'", "Backup :".blue().bold(), bak.display());
-        // In-place edit: source path == output path. We just renamed it to
-        // `.bak`, so make the writer read tensor bytes from there.
-        if gguf.path == args.output {
+        if gguf.path == output {
             gguf.path = bak;
         }
     }
@@ -70,19 +71,19 @@ pub fn run(args: &RemoveArgs) -> anyhow::Result<()> {
         &gguf.metadata,
         &gguf.tensor_infos,
         gguf.alignment,
-        &args.output,
+        &output,
     )
-    .with_context(|| format!("write output '{}'", args.output.display()))?;
+    .with_context(|| format!("write output '{}'", output.display()))?;
 
     eprintln!(
         "{} '{}' ({} bytes)",
         "Written:".green().bold(),
-        args.output.display(),
-        fs::metadata(&args.output)
+        output.display(),
+        fs::metadata(&output)
             .map(|m| m.len().to_string())
             .unwrap_or_else(|_| "?".to_string())
     );
-    info!(key = %args.key, output = %args.output.display(), "remove complete");
+    info!(key = %args.key, output = %output.display(), "remove complete");
     Ok(())
 }
 
@@ -97,7 +98,7 @@ mod tests {
         let args = RemoveArgs {
             file: PathBuf::from("/no/such/file.gguf"),
             key: "general.name".to_string(),
-            output: PathBuf::from("/tmp/out.gguf"),
+            output: Some(PathBuf::from("/tmp/out.gguf")),
             force: false,
             backup: false,
             dry_run: false,

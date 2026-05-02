@@ -1,0 +1,59 @@
+[workspace]
+members = [
+    ".",
+    "gguf-cli",
+]
+resolver = "2"
+
+[package]
+name = "gguf-rs-lib"
+version = "0.2.5"
+edition = "2021"
+description = "A Rust library for reading and writing GGUF (GGML Universal Format) files"
+authors = ["Claude Code", "Wyatt Roersma"]
+license = "MIT"
+repository = "https://github.com/ThreatFlux/gguf_rs"
+homepage = "https://github.com/ThreatFlux/gguf_rs"
+documentation = "https://docs.rs/gguf-rs-lib"
+readme = "README.md"
+keywords = ["gguf", "ggml", "machine-learning", "format", "parser"]
+categories = ["parsing", "data-structures", "science"]
+
+[dependencies]
+# Core dependencies
+serde = { version = "1.0", features = ["derive"], default-features = false, optional = true }
+thiserror = { version = "1.0", default-features = false, optional = true }
+# Removed to avoid recursion issues - using manual endian conversion
+# byteorder = "1.5"
+
+# Core no_std support
+hashbrown = { version = "0.14", default-features = false, features = ["ahash"], optional = true }
+libm = { version = "0.2", optional = true }
+
+# Optional dependencies for additional functionality
+tokio = { version = "1.0", features = ["io-util", "fs", "macros", "rt-multi-thread"], optional = true }
+memmap2 = { version = "0.9", optional = true }
+
+[features]
+default = ["std"]
+std = ["serde/std", "thiserror", "alloc"]
+# Core allocation support - essentially required for any meaningful functionality
+alloc = ["hashbrown", "libm", "serde?/alloc"]
+async = ["dep:tokio", "std"]
+mmap = ["dep:memmap2", "std"]
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+tempfile = "3.8"
+tokio-test = "0.4"
+proptest = "1.4"
+quickcheck = "1.0"
+quickcheck_macros = "1.0"
+
+[[bench]]
+name = "gguf_benchmarks"
+harness = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
